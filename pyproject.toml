@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cvops"
+version = "0.0.1"
+authors = [
+  { name="Kevin Hannegan", email="kevin@presalytics.io" },
+]
+description = "A python client for working with the cvops.io platform"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  'paho-mqtt>=1.6.1',
+  'pydantic>=2.1.1',
+  'pydantic-settings>=2.0.2',
+  'requests>=2.26.0',
+  'environs>=9.5.0',
+  'onnxruntime>=1.15.1',
+  'onnx>=1.14.0'
+]
+
+[project.optional-dependencies]
+torch = [
+  'torch==1.13.0',
+  'torchvision==0.14.0'
+]
+
+tf = [
+  'tensorflow==2.13.0',
+  'tf2onnx>=1.14.0'
+]
+
+dev = [
+  'pylint',
+  'mypy',
+  'autopep8==2.0.2',
+  'pycodestyle==2.10.0',
+  'types-requests'
+]
+
+[project.urls]
+"Homepage" = 'https://cvops.io'
+"Bug Tracker" = 'https://github.com/cvops/cvops-python/issues'
+
+[tool.mypy]
+python_version = '3.8'
+warn_unused_configs = true
+warn_return_any = true
+ignore_missing_imports = true
+
+[tool.pylint.'MESSAGES CONTROL']
+max-line-length = 120
+
+[tool.autopep8]
+max_line_length = 120
+in-place = true
+recursive = true
+aggressive = 3
+exclude-globs = ["build", "dist", "env", "venv", ".venv", ".env", ".git", ".tox", ".eggs", "*.egg"]
+
+
+

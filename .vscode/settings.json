@@ -1,0 +1,32 @@
+{
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./src/tests",
+        "-p",
+        "test_*.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.mypyEnabled": true,
+    "cSpell.words": [
+        "autoreconnect",
+        "CONNACK",
+        "cvops",
+        "excepthook",
+        "klass",
+        "levelname",
+        "MLFLOW",
+        "mqtt",
+        "mqtts",
+        "packettypes",
+        "paho",
+        "pydantic"
+    ],
+    "python.analysis.exclude": [
+        "**/venv",
+        "venv/",
+        "venv*"
+    ]
+}

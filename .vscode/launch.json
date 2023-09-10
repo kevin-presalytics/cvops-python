@@ -1,0 +1,38 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug CLI",
+            "type": "python",
+            "request": "launch",
+            "module": "cvops",
+            "args": "workspace",
+            "cwd":"${workspaceFolder}",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Debug Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "unittest",
+            "args": [
+                "discover",
+                "-v",
+                "-s",
+                "./src/tests",
+                "-p",
+                "test_*.py",
+                "-t",
+                "./src"
+            ],
+            "justMyCode": true
+        },
+        
+    ]
+}
