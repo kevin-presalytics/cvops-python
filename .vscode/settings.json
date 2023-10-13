@@ -10,10 +10,12 @@
     "python.testing.unittestEnabled": true,
     "python.linting.pylintEnabled": true,
     "python.linting.mypyEnabled": true,
+    "python.languageServer": "None",
     "cSpell.words": [
         "autoreconnect",
         "CONNACK",
         "cvops",
+        "DETECTRON",
         "excepthook",
         "klass",
         "levelname",
@@ -22,7 +24,9 @@
         "mqtts",
         "packettypes",
         "paho",
-        "pydantic"
+        "pydantic",
+        "ultralytics",
+        "YOLO"
     ],
     "python.analysis.exclude": [
         "**/venv",

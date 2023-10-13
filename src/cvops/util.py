@@ -53,33 +53,31 @@ def upload_file(
 
 def export_to_onnx(
     path: pathlib.Path,
-    framework: typing.Optional[typing.Union[str, cvops.schemas.ModelFrameworks]] = None,
-    export_args: typing.Dict[str, typing.Any] = {},  # pylint: disable=dangerous-default-value
+    platform: typing.Optional[typing.Union[str, cvops.schemas.ModelPlatform]] = None,
+    export_args: typing.Optional[typing.Dict[str, typing.Any]] = None  # pylint: disable=dangerous-default-value
 ) -> pathlib.Path:
     """ exports and onnx model to file from a model on a local filepath"""
-    if not framework:
-        framework = cvops.schemas.ModelFrameworks.parse_from_filename(path.name)
-    if isinstance(framework, str):
-        framework = cvops.schemas.ModelFrameworks(framework)
-    if framework == cvops.schemas.ModelFrameworks.ONNX:
-        return path
-
-    export_name = path.name.split(".")[-2] + ".onnx"
-    export_path = pathlib.Path()
-
-    if framework == cvops.schemas.ModelFrameworks.TORCH:
-        try:
-            import torch  # pylint: disable=import-outside-toplevel, import-error
-            import torch.onnx  # pylint: disable=import-outside-toplevel, import-error
-            model = torch.load(str(path))
-            torch.onnx.export(model, export_name, **export_args)
-        except ImportError:
-            logger.error(
-                "This model requires pytorch installed in the python environment.  You can install a compatible version with \"pip install cvops[torch]\"")
-    if framework == cvops.schemas.ModelFrameworks.TENSORFLOW:
-        import tf2onnx  # pylint: disable=import-outside-toplevel, import-error
-        tf2onnx.convert.from_keras(model, output_path=export_path, **export_args)
-
-    onnx_model = onnx.load(export_name)
-    onnx.checker.check_model(onnx_model)
-    return export_path
+    try:
+        if not export_args:
+            export_args = {}
+        if platform:
+            if not isinstance(platform, cvops.schemas.ModelPlatform):
+                platform = cvops.schemas.ModelPlatform(platform)
+            if platform == cvops.schemas.ModelPlatform.YOLO:
+                from ultralytics import YOLO
+                model = YOLO(path)
+                output_path = model.export(format='onnx', **export_args)
+                # model.trainer = None
+                # exporter = Exporter(overrides=export_args)
+                # exporter.file = path
+                # exporter.model = model
+                # exporter.im = torch.zeros(exporter.args.batch, 3, exporter.args.imgsz).to(torch.device('cpu'))
+                # output_path, _ = exporter.export_onnx()
+                return pathlib.Path(output_path)
+            else:
+                raise NotImplementedError("Only YOLOv8 is currently supported for export")
+        else:
+            raise NotImplementedError("Only YOLOv8 is currently supported for export")
+    except ImportError:
+        logger.error("Unable to import required dependencies for model export.  Please install ultralytics and torch to export YOLOv8 models")
+        raise

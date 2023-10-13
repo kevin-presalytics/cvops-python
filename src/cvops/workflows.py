@@ -36,6 +36,7 @@ def deploy_model_to_devices(
         manager.deploy(
             model_type=model_type,
             model_framework=model_framework,
+            ml_model_source=cvops.schemas.ModelSourceTypes.LOCAL_FILE,
             path=filepath,
             device_ids=device_ids,
             **kwargs
@@ -59,10 +60,12 @@ def deploy_YOLOv8(
         target_file_path = pathlib.Path(path)
     else:
         target_file_path = pathlib.Path(os.getcwd(), "yolov8n-seg.pt")
-    cvops.util.download_file(YOLO_SEGMENT_URL, target_file_path)
-    cvops.util.export_to_onnx(target_file_path, cvops.schemas.ModelFrameworks.TORCH, kwargs)
-    deploy_onnx_model(target_file_path, device_ids, **kwargs)
+        cvops.util.download_file(YOLO_SEGMENT_URL, target_file_path)
+    cvops.util.export_to_onnx(target_file_path, cvops.schemas.ModelPlatform.YOLO, kwargs)
+    model_file = target_file_path.with_suffix(".onnx") 
+    deploy_onnx_model(model_file, device_ids, **kwargs)
     os.remove(target_file_path)
+    os.remove(model_file)
 
 
 def deploy_onnx_model(
@@ -71,7 +74,7 @@ def deploy_onnx_model(
     model_type: typing.Union[str, cvops.schemas.ModelTypes] = cvops.schemas.ModelTypes.IMAGE_SEGMENTATION,
     **kwargs
 ) -> None:
-    """ Depolys an onnx model to devices in workspace from a local filepath or url"""
+    """ Deploys an onnx model to devices in workspace from a local filepath or url"""
     file_path = path
     if not isinstance(path, pathlib.Path) and str(path).startswith("http"):
         file_path = cvops.util.download_file(path)

@@ -105,6 +105,7 @@ class MqttManager(object):
     on_message_callback: typing.Callable[[mqtt.Client, object, mqtt.MQTTMessage], None]
     on_disconnect_callback: typing.Callable[[mqtt.Client, object, int], None]
     is_connecting: bool
+    
 
     _subscription_registry: typing.Dict[str, typing.Optional[typing.Callable[[str], None]]]
     _message_queue: typing.List[MqttMessage]
@@ -112,6 +113,7 @@ class MqttManager(object):
     _subscription_ids = typing.Dict[int, str]
     _inflight_messages = typing.Dict[int, MqttMessage]
     _is_closing: bool
+    _connection_create_count: int
 
     def __init__(
         self,
@@ -149,6 +151,7 @@ class MqttManager(object):
         self._subscription_ids = {}  # type: ignore
         self._inflight_messages = {}  # type: ignore
         self._is_closing = False
+        self._connection_create_count = 0
 
         if self.use_tls:
             self.client.tls_set()
@@ -194,17 +197,6 @@ class MqttManager(object):
         """Returns True if the MQTT Client is connected"""
         return self.client.is_connected()  # type: ignore
 
-    # @contextlib.contextmanager
-    # def connect(self):
-    #     """ Context manager for connecting to the MQTT Broker.
-    #     Opens the connection, yields the instance and closes the connection. """
-    #     self.open()
-    #     try:
-    #         yield signal
-    #     finally:
-    #         signal.complete_callback()
-    #         self.close()
-
     def _start_connection(self) -> None:
         """Connects to the MQTT Broker"""
         try:
@@ -212,7 +204,8 @@ class MqttManager(object):
                 self.is_connecting = True
                 if self.device_id is None or self.device_secret is None:
                     raise ValueError("Device ID and Device Secret are required to connect to MQTT Broker")
-                logger.info("Connecting to MQTT Broker at %s with device id %s ...", self.mqtt_uri, self.device_id)
+                if self._connection_create_count == 0:
+                    logger.info("Connecting to MQTT Broker at %s with device id %s ...", self.mqtt_uri, self.device_id)
                 self.client.connect(self.mqtt_host, self.mqtt_port)
         except ValueError as ex:
             logger.error(ex.args[0])
@@ -243,6 +236,8 @@ class MqttManager(object):
 
     def on_connect(self) -> None:
         """ Callback for when the MQTT Client connects to the broker"""
+        self.is_connecting = False
+        self._connection_create_count += 1
         logger.info("Connected to CVOPS MQTT Broker.  Listening for messages...")
         self._flush_subscriptions()
         self._flush_message_queue()
@@ -283,13 +278,13 @@ class MqttManager(object):
             raise ex
 
     @contextlib.contextmanager
-    def open(self) -> typing.Iterator[CallbackSignal]:
-        """ Keep and open connection to the MQTT Broker and listen for messages"""
+    def open(self, timeout: typing.Optional[float] = None) -> typing.Iterator[CallbackSignal]:
+        """ Keep an open connection to the MQTT Broker and listen for messages"""
         try:
             if not self.is_connected and not self.is_connecting:
                 self._start_connection()
             self.client.loop_start()
-            yield CallbackSignal()
+            yield CallbackSignal(timeout=timeout)
         except KeyboardInterrupt:
             logger.info("\r\nDisconnecting from MQTT Broker...")
         except Exception as ex:  # pylint: disable=broad-except

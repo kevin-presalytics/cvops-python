@@ -143,35 +143,42 @@ class DeviceManager(cvops.events.EventManager):
                 self.activate_device()
 
     def get_workspace(self) -> cvops.schemas.Workspace:
-        """ Returns the handler index for the provided response callback.  Returns -1 if no handler is provided. """
+        """ Returns the devices workspace from the MQTT Broker"""
         try:
-            with self.open():
-                self.get_device_info()
-                self._wait_for_value("device")
-                payload = cvops.events.WorkspaceDetailsRequestEvent()
-                payload.response_topic = self.device_events_topic
-                if self.device:
-                    payload.device_id = self.device.id
-                    payload.workspace_id = self.device.workspace_id
-                    payload.response_topic = self.device_events_topic
-                else:
-                    raise ValueError("Device details not available")
-                message = cvops.mqtt.MqttMessage(
-                    self.device_events_topic,
-                    payload.to_json(),
-                    cvops.mqtt.QualityOfService.EXACTLY_ONCE,
-                    True,
-                    self.device_events_topic,
-                    ""
-                )
-                self.publish(message)
-                self._wait_for_value("workspace")
+            if self.is_connected or self.is_connecting:
+                self._get_workspace()
+            else:
+                with self.open():
+                    self._get_workspace()
             if self.workspace:
                 return self.workspace
             raise ValueError("Workspace details not available.")  # Note: This should never happen
         except Exception as ex:
             logger.exception("Error getting workspace: %s", ex)
             raise ex
+        
+    def _get_workspace(self) -> None:
+        """ Logic for getting the workspace """
+        self.get_device_info()
+        self._wait_for_value("device")
+        payload = cvops.events.WorkspaceDetailsRequestEvent()
+        payload.response_topic = self.device_events_topic
+        if self.device:
+            payload.device_id = self.device.id
+            payload.workspace_id = self.device.workspace_id
+            payload.response_topic = self.device_events_topic
+        else:
+            raise ValueError("Device details not available")
+        message = cvops.mqtt.MqttMessage(
+            self.device_events_topic,
+            payload.to_json(),
+            cvops.mqtt.QualityOfService.EXACTLY_ONCE,
+            True,
+            self.device_events_topic,
+            ""
+        )
+        self.publish(message)
+        self._wait_for_value("workspace")
 
     def _wait_for_value(self, key: str) -> None:
         """ Waits for the object to be set """

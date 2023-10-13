@@ -7,3 +7,9 @@ __pycache__/
 .env
 *.env
 .mypy_cache/
+models/
+llama/
+*.pt
+*.pth
+runs/
+*.onnx

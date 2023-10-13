@@ -37,6 +37,11 @@ tf = [
   'tf2onnx>=1.14.0'
 ]
 
+yolo = [
+  'ultralytics'
+]
+
+
 dev = [
   'pylint',
   'mypy',
@@ -44,6 +49,7 @@ dev = [
   'pycodestyle==2.10.0',
   'types-requests'
 ]
+
 
 [project.urls]
 "Homepage" = 'https://cvops.io'

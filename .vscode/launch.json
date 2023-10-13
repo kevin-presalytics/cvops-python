@@ -9,9 +9,9 @@
             "type": "python",
             "request": "launch",
             "module": "cvops",
-            "args": "workspace",
+            "args": ["deploy", "yolov8"],
             "cwd":"${workspaceFolder}",
-            "justMyCode": true,
+            "justMyCode": false,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"
             }

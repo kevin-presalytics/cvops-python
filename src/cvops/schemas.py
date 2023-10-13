@@ -33,7 +33,7 @@ class EditorTypes(LowerCaseEnum):
 
 class BaseEntity(pydantic.BaseModel, abc.ABC):
     """ Base class for all CVOps Hub Entities"""
-    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel)
+    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
     id: str
     date_created: datetime.datetime = pydantic.Field(default_factory=now)
     user_created: typing.Optional[str] = None
@@ -67,7 +67,7 @@ class Device(BaseEntity):
 
 class ModelSourceTypes(LowerCaseEnum):
     """ Enum Indicating the type of editor for an entity """
-    LOCAL_S3_BUCKET = "LocalS3Bucket"  # Indicates that the model is local to this device, and tr
+    LOCAL_FILE = "LocalFile"  # Indicates that the model is local to this device, and tr
     REMOTE_S3_BUCKET = "RemoteS3Bucket"  # Indicates that the model is remote to this device, and will be downloaded from a remote S3 bucket
     # Indicates that the model is remote to this device, and will be downloaded from weights and biases
     WEIGHTS_AND_BIASES = "WeightsAndBiases"
@@ -109,28 +109,30 @@ class DeviceDeploymentStatusTypes(LowerCaseEnum):
 
 class DeviceDeploymentStatus(pydantic.BaseModel):
     """ Status of a deployment on a device"""
-    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel)
+    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
     deployment_id: str
     device_id: str
     status: DeviceDeploymentStatusTypes = DeviceDeploymentStatusTypes.NONE
     message: typing.Optional[str] = None
 
 
+class DeviceDeploymentStatusList(pydantic.BaseModel):
+    """" Wrapper class for device deployment status list"""
+    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
+    devices: typing.List[DeviceDeploymentStatus] = []
+
+
 class Deployment(BaseEntity):
     """ Record in CVOps Hub for a deployment deployment of an AI Model to a set"""
+    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
     deployment_initiator_id: str = cvops.config.SETTINGS.device_id
     deployment_initiator_type: EditorTypes = EditorTypes.DEVICE
-    ml_model_source: ModelSourceTypes = pydantic.Field(
-        ModelSourceTypes.LOCAL_S3_BUCKET,
-        alias="model_source",
-        serialization_alias="modelSource")
-    device_ids: typing.List[str]
+    ml_model_source: ModelSourceTypes = pydantic.Field(ModelSourceTypes.LOCAL_FILE, alias="modelSource")
     workspace_id: str
-    devices_status: typing.List[DeviceDeploymentStatus] = []
+    devices_status: DeviceDeploymentStatusList = DeviceDeploymentStatusList()
     bucket_name: str
     object_name: str
-    ml_model_metadata: typing.Dict[str, typing.Any] = pydantic.Field(
-        {}, alias="model_metadata", serialization_alias="modelMetadata")
+    ml_model_metadata: typing.Dict[str, typing.Any] = pydantic.Field({}, alias="modelMetadata")
     status: DeploymentStatusTypes = DeploymentStatusTypes.NONE
 
 
@@ -145,26 +147,30 @@ class Workspace(BaseEntity):
 
 class DeploymentCreatedPayload(pydantic.BaseModel):
     """ DTO for creating a deployment """
-    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel)
+    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
     workspace_id: str
     device_ids: typing.List[str]
-    ml_model_source: ModelSourceTypes = pydantic.Field(
-        ModelSourceTypes.LOCAL_S3_BUCKET,
-        alias="model_source",
-        serialization_alias="modelSource")
-    ml_model_type: ModelTypes = pydantic.Field(
-        ModelTypes.IMAGE_SEGMENTATION,
-        alias="model_type",
-        serialization_alias="modelType")
+    ml_model_source: ModelSourceTypes = pydantic.Field(ModelSourceTypes.LOCAL_FILE, alias="modelSource")
+    ml_model_type: ModelTypes = pydantic.Field(ModelTypes.IMAGE_SEGMENTATION, alias="modelType")
     deployment_initiator_id: str
     deployment_initiator_type: EditorTypes = EditorTypes.DEVICE
     bucket_name: typing.Optional[str] = None
     object_name: typing.Optional[str] = None
-    ml_model_metadata: typing.Dict[str, typing.Any] = pydantic.Field(
-        {},
-        alias="model_metadata",
-        serialization_alias="modelMetadata"
-    )
+    ml_model_metadata: typing.Dict[str, typing.Any] = pydantic.Field({}, alias="modelMetadata")
+
+class DeploymentMessageTypes(LowerCaseEnum):
+    """ Message type on the deployment channel"""
+    CREATED = "Created"
+    UPDATED = "Updated"
+    DELETED = "Deleted"
+    DEVICE_STATUS = "DeviceStatus"
+
+
+class DeploymentMessage(pydantic.BaseModel):
+    """ Dto for messages from the deployment topic"""
+    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
+    type: DeploymentMessageTypes
+    payload: typing.Union[DeploymentCreatedPayload, Deployment]
 
 
 class ModelFrameworks(LowerCaseEnum):
@@ -201,5 +207,20 @@ class StorageMessageTypes(LowerCaseEnum):
 
 class StorageMessagePayload(pydantic.BaseModel):
     """ Dto for messages from the device storage topic"""
+    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
     type: StorageMessageTypes
     url: typing.Optional[str] = None
+    object_name: typing.Optional[str] = None
+
+
+class StorageMessage(pydantic.BaseModel):
+    """ Dto for messages from the device storage topic"""
+    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
+    response_topic: typing.Optional[str] = None
+    payload: StorageMessagePayload
+
+
+class ModelPlatform(LowerCaseEnum):
+    """ Platform for the model. Typically an organization that manages IP for model packaging"""
+    YOLO = "yolo"
+    DETECTRON = "detectron"  # Not Implemented
