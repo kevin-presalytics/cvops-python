@@ -6,6 +6,8 @@ import logging
 import http
 import requests
 import onnx
+import numpy
+import cv2
 import cvops.schemas
 
 
@@ -44,7 +46,7 @@ def upload_file(
         if not resp.ok:
             raise ConnectionError
     except ConnectionError as conn_error:
-        logger.error("Connection to upload url unstable.  Please check connecetion and retry.")
+        logger.error("Connection to upload url unstable.  Please check connection and retry.")
         raise conn_error
     except Exception as ex:  # pylint: disable
         logger.exception(ex, "Unable to upload file")
@@ -53,7 +55,7 @@ def upload_file(
 
 def export_to_onnx(
     path: pathlib.Path,
-    platform: typing.Optional[typing.Union[str, cvops.schemas.ModelPlatform]] = None,
+    platform: typing.Optional[typing.Union[str, cvops.schemas.ModelPlatforms]] = None,
     export_args: typing.Optional[typing.Dict[str, typing.Any]] = None  # pylint: disable=dangerous-default-value
 ) -> pathlib.Path:
     """ exports and onnx model to file from a model on a local filepath"""
@@ -61,18 +63,12 @@ def export_to_onnx(
         if not export_args:
             export_args = {}
         if platform:
-            if not isinstance(platform, cvops.schemas.ModelPlatform):
-                platform = cvops.schemas.ModelPlatform(platform)
-            if platform == cvops.schemas.ModelPlatform.YOLO:
+            if not isinstance(platform, cvops.schemas.ModelPlatforms):
+                platform = cvops.schemas.ModelPlatforms(platform)
+            if platform == cvops.schemas.ModelPlatforms.YOLO:
                 from ultralytics import YOLO
                 model = YOLO(path)
                 output_path = model.export(format='onnx', **export_args)
-                # model.trainer = None
-                # exporter = Exporter(overrides=export_args)
-                # exporter.file = path
-                # exporter.model = model
-                # exporter.im = torch.zeros(exporter.args.batch, 3, exporter.args.imgsz).to(torch.device('cpu'))
-                # output_path, _ = exporter.export_onnx()
                 return pathlib.Path(output_path)
             else:
                 raise NotImplementedError("Only YOLOv8 is currently supported for export")

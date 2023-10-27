@@ -9,7 +9,14 @@
             "type": "python",
             "request": "launch",
             "module": "cvops",
-            "args": ["deploy", "yolov8"],
+            "args": ["run-inference", 
+                "-m",
+                "./yolov8n.onnx",
+                "-i",
+                "./src/tests/files/intersection.jpg",
+                "-p",
+                "YOLO"
+            ],
             "cwd":"${workspaceFolder}",
             "justMyCode": false,
             "env": {

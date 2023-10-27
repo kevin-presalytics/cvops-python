@@ -3,7 +3,9 @@ import argparse
 import sys
 import logging
 import typing
+import pathlib
 import cvops
+import cvops.schemas
 import cvops.device
 import cvops.events
 import cvops.workflows
@@ -42,6 +44,7 @@ class CLI(object):
         VERSION = "version"
         WORKSPACE = "workspace"
         DEPLOY = "deploy"
+        RUN_INFERENCE = 'run-inference'
 
     class Descriptions:
         """Descriptions for the CLI commands"""
@@ -52,6 +55,7 @@ class CLI(object):
         VERSION = "View the current version of the CVOps SDK"
         WORKSPACE = "View info about the CVOps workspace that this deice is connected to."
         DEPLOY = "Deploy a model to devices in your workspace"
+        RUN_INFERENCE = "Run inference on a local model file for testing purposes"
 
     class DeployDescriptions:
         """Descriptions for the deploy command"""
@@ -88,7 +92,19 @@ class CLI(object):
             help=self.Descriptions.DEPLOY,
             description=self.DeployDescriptions.DEPLOY
         )
-
+        self.run_inference_parser = self.subparsers.add_parser('run-inference', help=self.Descriptions.RUN_INFERENCE)
+        self.run_inference_parser.add_argument(
+            "-m", "--model-path", 
+            help="Path to the model file to test",
+        )
+        self.run_inference_parser.add_argument(
+            "-i", "--image-path",
+            help="Path to the image file to run inference on",
+        )
+        self.run_inference_parser.add_argument(
+            "-p", "--model-platform",
+            help="Model platform of the model to test.  Can be one of: [YOLO, Detectron].  Defaults to \"YOLO\"",
+        )
 
 
         self.deploy_subparsers = self.deploy_parser.add_subparsers(
@@ -153,7 +169,8 @@ class CLI(object):
             self.Commands.LISTEN: self.listen_handler,
             self.Commands.VERSION: self.version_handler,
             self.Commands.WORKSPACE: self.workspace_handler,
-            self.Commands.DEPLOY: self.deploy_handler
+            self.Commands.DEPLOY: self.deploy_handler,
+            self.Commands.RUN_INFERENCE: self.run_inference_handler
         }
 
         self.deployment_command_map = {
@@ -193,6 +210,14 @@ class CLI(object):
             print_workspace,
             disconnect_after_callback=True)
         device_manager.get_workspace()
+
+    @staticmethod
+    def run_inference_handler(args: argparse.Namespace) -> None:  # pylint: disable=unused-argument
+        """Handles the run inference command"""
+        platform = cvops.schemas.ModelPlatforms(args.model_platform)
+        model_path = pathlib.Path(args.model_path)
+        image_path = pathlib.Path(args.image_path)
+        cvops.workflows.test_onnx_inference(model_path, image_path, platform)
 
     def deploy_handler(self, args: argparse.Namespace) -> None:  # pylint: disable=unused-argument
         """Handles the deploy command"""

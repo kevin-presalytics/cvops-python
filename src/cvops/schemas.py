@@ -220,7 +220,7 @@ class StorageMessage(pydantic.BaseModel):
     payload: StorageMessagePayload
 
 
-class ModelPlatform(LowerCaseEnum):
+class ModelPlatforms(LowerCaseEnum):
     """ Platform for the model. Typically an organization that manages IP for model packaging"""
     YOLO = "yolo"
     DETECTRON = "detectron"  # Not Implemented

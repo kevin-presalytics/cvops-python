@@ -3,9 +3,13 @@ import logging
 import typing
 import os
 import pathlib
+import json
+import onnxruntime
+import numpy
 import cvops.util
 import cvops.schemas
 import cvops.deployments
+import cvops.image_processor
 
 
 logger = logging.getLogger(__name__)
@@ -48,6 +52,7 @@ def deploy_model_to_devices(
 
 
 YOLO_SEGMENT_URL = "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n-seg.pt"
+YOLO_OBJECT_DETECTION_URL = "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.pt"
 
 
 def deploy_YOLOv8(
@@ -61,7 +66,7 @@ def deploy_YOLOv8(
     else:
         target_file_path = pathlib.Path(os.getcwd(), "yolov8n-seg.pt")
         cvops.util.download_file(YOLO_SEGMENT_URL, target_file_path)
-    cvops.util.export_to_onnx(target_file_path, cvops.schemas.ModelPlatform.YOLO, kwargs)
+    cvops.util.export_to_onnx(target_file_path, cvops.schemas.ModelPlatforms.YOLO, kwargs)
     model_file = target_file_path.with_suffix(".onnx") 
     deploy_onnx_model(model_file, device_ids, **kwargs)
     os.remove(target_file_path)
@@ -79,3 +84,22 @@ def deploy_onnx_model(
     if not isinstance(path, pathlib.Path) and str(path).startswith("http"):
         file_path = cvops.util.download_file(path)
     deploy_model_to_devices(file_path, model_type, cvops.schemas.ModelFrameworks.ONNX, device_ids, **kwargs)
+
+
+def test_onnx_inference(
+    model_path: typing.Union[str, pathlib.Path],
+    image_path: typing.Union[str, pathlib.Path],
+    model_platform: typing.Union[str, cvops.schemas.ModelPlatforms] = cvops.schemas.ModelPlatforms.YOLO
+) -> None:
+    """ Tests an onnx model by running inference on a local image"""
+    if isinstance(model_path, str):
+        model_path = pathlib.Path(model_path)
+    if isinstance(model_platform, str):
+        model_platform = cvops.schemas.ModelPlatforms(model_platform)
+    image_processor = cvops.image_processor.ImageProcessor(model_platform, model_path)
+    if isinstance(image_path, str):
+        image_path = pathlib.Path(image_path)
+    inference_result = image_processor.run(image_path)
+    output_path = pathlib.Path(os.getcwd(), "inference_result.png")
+    image_processor.visualize_inference(inference_result, output_path)
+        
