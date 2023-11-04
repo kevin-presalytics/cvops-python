@@ -13,3 +13,8 @@ llama/
 *.pth
 runs/
 *.onnx
+cmake/CMakeFiles/
+cmake/cvops_*
+cmake/Makefile
+cmake/CMakeCache.txt
+cmake/*.cmake`

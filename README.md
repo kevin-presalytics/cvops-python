@@ -4,9 +4,10 @@ Command line utility and python library for interacting with CVOps MQTT Broker, 
 
 ## Intallation
 
-Activate a virtual environment, then run the followin
+Activate a virtual environment, then run the following:
 
 ```bash
+pip install -U pip
 pip install git+https://github.com/kevin-presalytics/cvops-python.git
 ```
 
