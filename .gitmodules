@@ -1,0 +1,4 @@
+[submodule "cvops-inference"]
+	path = cvops-inference
+	url = https://github.com/kevin-presalytics/cvops-inference.git
+	branch = main

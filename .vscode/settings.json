@@ -47,5 +47,11 @@
         "**/venv",
         "venv/",
         "venv*"
-    ]
+    ],
+    "cmake.sourceDirectory": "/home/kevin/projects/cvez/cvops-python/cvops-inference",
+    "cmake.autoSelectActiveFolder": false,
+    "files.associations": {
+        "stdexcept": "cpp"
+    }
+    
 }

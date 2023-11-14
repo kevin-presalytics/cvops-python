@@ -4,6 +4,7 @@ import sys
 import logging
 import typing
 import pathlib
+import json
 import cvops
 import cvops.schemas
 import cvops.device
@@ -104,6 +105,10 @@ class CLI(object):
         self.run_inference_parser.add_argument(
             "-p", "--model-platform",
             help="Model platform of the model to test.  Can be one of: [YOLO, Detectron].  Defaults to \"YOLO\"",
+        )
+        self.run_inference_parser.add_argument(
+            "-d", "--metadata-path",
+            help="Path to a json file containing model metadata",
         )
 
 
@@ -217,7 +222,11 @@ class CLI(object):
         platform = cvops.schemas.ModelPlatforms(args.model_platform)
         model_path = pathlib.Path(args.model_path)
         image_path = pathlib.Path(args.image_path)
-        cvops.workflows.test_onnx_inference(model_path, image_path, platform)
+        metadata = {}
+        if args.metadata_path:
+            with open(args.metadata_path, 'r') as metadata_file:
+                metadata = json.load(metadata_file)
+        cvops.workflows.test_onnx_inference(model_path, image_path, platform, metadata)
 
     def deploy_handler(self, args: argparse.Namespace) -> None:  # pylint: disable=unused-argument
         """Handles the deploy command"""

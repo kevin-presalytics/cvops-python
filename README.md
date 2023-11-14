@@ -4,6 +4,13 @@ Command line utility and python library for interacting with CVOps MQTT Broker, 
 
 ## Intallation
 
+Install prequisite binrary packages
+
+```bash
+# Linux
+sudo apt install libopencv-dev libboost-all-dev libjsoncpp-dev
+```
+
 Activate a virtual environment, then run the following:
 
 ```bash

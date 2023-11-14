@@ -4,6 +4,28 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
+        {
+            "name": "C++ Lib Attach (gdb)",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${workspaceFolder}/venv/bin/python",
+            "processId": "${command:pickProcess}",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
         {
             "name": "Debug CLI",
             "type": "python",
@@ -11,17 +33,20 @@
             "module": "cvops",
             "args": ["run-inference", 
                 "-m",
-                "./yolov8n.onnx",
+                "./src/tests/files/yolov8n.onnx",
                 "-i",
                 "./src/tests/files/intersection.jpg",
                 "-p",
-                "YOLO"
+                "YOLO",
+                "-d",
+                "./src/tests/files/yolov8n-metadata.json",
             ],
             "cwd":"${workspaceFolder}",
             "justMyCode": false,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"
-            }
+            },
+            "preLaunchTask": "build-c-library"
         },
         {
             "name": "Debug Tests",

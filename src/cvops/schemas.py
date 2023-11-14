@@ -3,9 +3,11 @@ import abc
 import datetime
 import typing
 import enum
+import uuid
 import pydantic
 import pydantic.alias_generators
 import cvops.config
+
 
 
 def now():
@@ -34,13 +36,18 @@ class EditorTypes(LowerCaseEnum):
 class BaseEntity(pydantic.BaseModel, abc.ABC):
     """ Base class for all CVOps Hub Entities"""
     model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
-    id: str
+    id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     date_created: datetime.datetime = pydantic.Field(default_factory=now)
     user_created: typing.Optional[str] = None
     date_modified: datetime.datetime = pydantic.Field(default_factory=now)
     user_modified: typing.Optional[str] = None
     created_by: typing.Optional[EditorTypes] = None
     modified_by: typing.Optional[EditorTypes] = None
+
+
+class TimeSeriesEntity(BaseEntity):
+    """ Base class for all CVOps Hub Entities that have a time series"""
+    time: datetime.datetime = pydantic.Field(default_factory=now)
 
 
 class WorkspaceRole(LowerCaseEnum):
@@ -224,3 +231,41 @@ class ModelPlatforms(LowerCaseEnum):
     """ Platform for the model. Typically an organization that manages IP for model packaging"""
     YOLO = "yolo"
     DETECTRON = "detectron"  # Not Implemented
+
+
+class InferenceResultTypes(LowerCaseEnum):
+    BOXES = "boxes"
+    MESHES = "meshes"
+    LABELS = "labels"
+
+
+class Box(pydantic.BaseModel):
+    x: int
+    y: int
+    height: int
+    width: int
+    class_id: int
+    class_name: str
+    object_id: int
+    confidence: float
+
+class Label(pydantic.BaseModel):
+    class_id: int
+    class_name: str
+
+    def __eq__(self, other):
+        if isinstance(other, Label):
+            return self.class_id == other.class_id
+        return False
+
+
+class InferenceResult(TimeSeriesEntity):
+    """ DTO for inference results"""
+    model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
+    boxes: typing.List[typing.Dict[str, typing.Any]] = []
+    workspace_id: typing.Optional[str] = None
+    device_id: typing.Optional[str] = None
+    result_type: InferenceResultTypes = InferenceResultTypes.BOXES
+    boxes: typing.Optional[typing.Sequence[Box]] = []
+    meshes: typing.Optional[typing.Sequence] = []
+    labels:  typing.Optional[typing.Sequence] = []

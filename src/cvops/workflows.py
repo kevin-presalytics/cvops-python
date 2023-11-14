@@ -89,17 +89,25 @@ def deploy_onnx_model(
 def test_onnx_inference(
     model_path: typing.Union[str, pathlib.Path],
     image_path: typing.Union[str, pathlib.Path],
-    model_platform: typing.Union[str, cvops.schemas.ModelPlatforms] = cvops.schemas.ModelPlatforms.YOLO
+    model_platform: typing.Union[str, cvops.schemas.ModelPlatforms] = cvops.schemas.ModelPlatforms.YOLO,
+    metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
 ) -> None:
     """ Tests an onnx model by running inference on a local image"""
     if isinstance(model_path, str):
         model_path = pathlib.Path(model_path)
     if isinstance(model_platform, str):
         model_platform = cvops.schemas.ModelPlatforms(model_platform)
-    image_processor = cvops.image_processor.ImageProcessor(model_platform, model_path)
     if isinstance(image_path, str):
         image_path = pathlib.Path(image_path)
-    inference_result = image_processor.run(image_path)
-    output_path = pathlib.Path(os.getcwd(), "inference_result.png")
-    image_processor.visualize_inference(inference_result, output_path)
+
+    image_processor = cvops.image_processor.AcceleratedImageProcessor(
+        model_platform=model_platform,
+        model_path=model_path,
+        metadata=metadata
+    )
+    with image_processor:
+        inference_result = image_processor.run(image_path)
+        output_path = pathlib.Path(os.getcwd(), "inference_result.png")
+        image_processor.visualize_inference(inference_result, output_path)
+
         

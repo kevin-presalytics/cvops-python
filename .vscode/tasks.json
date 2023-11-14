@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build-c-library",
+			"type": "shell",
+			"command": "source venv/bin/activate; bootstrap",
+			"problemMatcher": []
+		}
+	]
+}

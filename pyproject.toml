@@ -53,6 +53,10 @@ dev = [
   'ctypesgen>=1.0.2',
 ]
 
+[project.scripts]
+bootstrap = "tools:bootstrap_cmake"
+ctypes_bindings = "tools:generate_ctypes_bindings"
+
 
 [project.urls]
 "Homepage" = 'https://cvops.io'
@@ -63,6 +67,9 @@ python_version = '3.8'
 warn_unused_configs = true
 warn_return_any = true
 ignore_missing_imports = true
+
+[tool.pylint.typecheck]
+generated-members = ["torch.*", "numpy.*", "onnx.*", "cv2.*", "cvops.*"]
 
 [tool.pylint.'MESSAGES CONTROL']
 max-line-length = 120
