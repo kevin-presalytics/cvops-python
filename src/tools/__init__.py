@@ -35,8 +35,6 @@ CMAKE_BUILD_COMMAND = [
 
 def bootstrap_cmake():
     """Builds the cvops-inference submodule and copies the built library to the to inference directory """
-    update_submodules()
-
     subprocess.run(CMAKE_CONFIGURE_COMMAND, cwd=C_SOURCE_DIR, check=True)
     subprocess.run(CMAKE_BUILD_COMMAND, cwd=C_SOURCE_DIR, check=True)
 
