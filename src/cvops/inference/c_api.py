@@ -26,9 +26,8 @@ class CApi(object):
         self.dll.run_inference.argtypes = [
             _types.c_i_inference_manager_p,
             _types.c_inference_request_p,
-            _types.c_inference_result_p
         ]
-        self.dll.run_inference.restype = None
+        self.dll.run_inference.restype = _types.c_inference_result_p
         self.dll.end_inference_session.argtypes = [_types.c_i_inference_manager_p]
         self.dll.end_inference_session.restype = None
         self.dll.error_message.restype = ctypes.c_char_p

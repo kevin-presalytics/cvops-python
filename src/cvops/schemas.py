@@ -234,12 +234,14 @@ class ModelPlatforms(LowerCaseEnum):
 
 
 class InferenceResultTypes(LowerCaseEnum):
+    """ Enum for the type of inference result being returned """
     BOXES = "boxes"
     MESHES = "meshes"
     LABELS = "labels"
 
 
 class Box(pydantic.BaseModel):
+    """ DTO for bounding boxes"""
     x: int
     y: int
     height: int
@@ -249,7 +251,11 @@ class Box(pydantic.BaseModel):
     object_id: int
     confidence: float
 
+    def __iter__(self):
+        return iter((self.x, self.y, self.width, self.height))
+
 class Label(pydantic.BaseModel):
+    """ DTO for detected classes """
     class_id: int
     class_name: str
 

@@ -99,13 +99,14 @@ def test_onnx_inference(
         model_platform = cvops.schemas.ModelPlatforms(model_platform)
     if isinstance(image_path, str):
         image_path = pathlib.Path(image_path)
+        
+    args = {
+        "model_platform": model_platform,
+        "model_path": model_path,
+        "metadata": metadata,
+    }
 
-    image_processor = cvops.image_processor.AcceleratedImageProcessor(
-        model_platform=model_platform,
-        model_path=model_path,
-        metadata=metadata
-    )
-    with image_processor:
+    with cvops.image_processor.AcceleratedImageProcessor(**args) as image_processor:
         inference_result = image_processor.run(image_path)
         output_path = pathlib.Path(os.getcwd(), "inference_result.png")
         image_processor.visualize_inference(inference_result, output_path)

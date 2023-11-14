@@ -58,9 +58,7 @@ class InferenceSessionManager(cvops.inference.c_api.CApi):
         return ctypes.c_int(model_platform)
 
     def _run_inference(self, request: cvops.inference.c_interfaces.InferenceRequest) -> cvops.inference.c_interfaces.InferenceResult:
-        result = _types.InferenceResult()
-        self.dll.run_inference(self.session, request, result)
-        return result
+        return self.dll.run_inference(self.session, request)
 
     
     def run_inference(self, 

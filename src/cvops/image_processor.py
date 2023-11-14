@@ -68,8 +68,15 @@ class ImageUtilsMixIn(abc.ABC):
         if not self._color_palette:
             if metadata.get("color_palette", None):
                 self._color_palette = metadata.get("color_palette")
-            self._color_palette = numpy.random.uniform(0, 255, size=(len(self.classes), 3))
+            self._color_palette = self.generate_color_palette(len(self.classes))
 
+    def generate_color_palette(self, num_colors: int) -> typing.Dict[int, typing.Tuple[int, int, int]]:
+        """ Generates a color palette with the given number of colors """
+        color_palette = {}
+        for i in range(num_colors):
+            colors = tuple([int(x) for x in numpy.random.randint(0, 255, size=3)])
+            color_palette[i] = colors
+        return color_palette
 
     @property
     def classes(self) -> typing.Dict[int, str]:
@@ -87,7 +94,7 @@ class ImageUtilsMixIn(abc.ABC):
                 raise ValueError("Color palette wrong shape: The number of colors in the color palette does not match the number of classes")
             return self._color_palette
         else:
-            raise Exception("Color palette not defined")  #pylint: disable
+            raise RuntimeError("Color palette not defined")  #pylint: disable
 
     def draw_detections(self, img, box, score, class_id):
         """
@@ -112,8 +119,11 @@ class ImageUtilsMixIn(abc.ABC):
         # Draw the bounding box on the image
         cv2.rectangle(img, (int(x1), int(y1)), (int(x1 + w), int(y1 + h)), color, 2)
 
+        class_name = self.classes.get(class_id, None) or self.classes.get(str(class_id), "")
+        confidence = f"{round(score * 100, 2)}%"
+
         # Create the label text with class name and score
-        label = f'{self.classes[class_id]}: {score:.2f}'
+        label = f'{class_name}: {confidence}'
 
         # Calculate the dimensions of the label text
         (label_width, label_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
@@ -130,17 +140,18 @@ class ImageUtilsMixIn(abc.ABC):
         cv2.putText(img, label, (label_x, label_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
 
     def visualize_inference(self, img: numpy.ndarray, filepath: typing.Union[pathlib.Path, str]):
+        """ Writes the image to disk """
         if isinstance(filepath, pathlib.Path):
             filepath = str(filepath)
         cv2.imwrite(filepath, img)
 
-    def extract_image_to_array(self, image: typing.Union[str, pathlib.Path, io.BytesIO]) -> numpy.ndarray:
+    def extract_image_to_array(self, image: typing.Union[str, pathlib.Path, io.BytesIO, bytes]) -> numpy.ndarray:
         """ Loads a image to an numpy.ndarray from a reference """
         if isinstance(image, numpy.ndarray):
             return image
         elif isinstance(image, str):
             if image.startswith("http"):
-                img_stream = io.BytesIO(requests.get(image).content)
+                img_stream = io.BytesIO(requests.get(image, timeout=60).content)
                 return cv2.imdecode(numpy.frombuffer(img_stream.read(), numpy.uint8), 1)
             else:
                 if not os.path.exists(image):
@@ -148,6 +159,11 @@ class ImageUtilsMixIn(abc.ABC):
                 return cv2.imread(image)
         elif isinstance(image, pathlib.Path):
             return cv2.imread(str(image))
+        elif isinstance(image, io.BytesIO) or isinstance(image, bytes):
+            image_stream = image
+            if isinstance(image_stream, bytes):
+                image_stream = io.BytesIO(image)                
+            return cv2.imdecode(numpy.frombuffer(image_stream.read(), numpy.uint8), 1)
         else:
             raise TypeError(f"The type ${image.__class__.__name__} is not support for reading")
     
@@ -199,7 +215,7 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
     def __exit__(self, exc_type, exc_value, traceback):
         try:
             self.onnx_session.close()
-        except:
+        except Exception:  # pylint: disable=broad-exception-caught
             pass
 
 
@@ -340,6 +356,8 @@ class AcceleratedImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
     confidence_threshold: float
     iou_threshold: float
     metadata: typing.Dict[str, typing.Any]
+    _inside_context_manager: bool
+
 
     def __init__(self,
                  *args,
@@ -357,6 +375,7 @@ class AcceleratedImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
             metadata=metadata,
             **kwargs
         )
+        self._inside_context_manager = False
         self.model_platform = model_platform
         if not os.path.exists(model_path):
             raise ValueError(f"Model cannot be found at {model_path}")
@@ -367,47 +386,63 @@ class AcceleratedImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
         self.metadata = metadata or {}
         self.session_manager = cvops.inference.manager.InferenceSessionManager()
 
-    def __enter__(self):
+    def __enter__(self) -> "AcceleratedImageProcessor":
         try:
+            self._inside_context_manager = True
             self.session_manager.start_session(
                 self.model_platform,
                 self.model_path,
                 self.metadata,
                 self.confidence_threshold,
                 self.iou_threshold)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.exception(e)
+        return self
     
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
         try:
             self.session_manager.close_session()
-        except Exception:
-            pass
+        except Exception:  # pylint: disable=broad-exception-caught
+            error = self.session_manager.dll.error_message() or ""
+            if (error):
+                logger.error(error)
+        finally:
+            self._inside_context_manager = False
 
 
     def run(self, image: typing.Union[str, pathlib.Path, io.BytesIO]) -> numpy.ndarray:
+        if not self._inside_context_manager:
+            raise RuntimeError("The image processor must be used as a context manager")
         image_bytes = self.get_image_bytes(image)
         try:
-            c_inference_result = self.session_manager.run_inference(image_bytes)
-            if not c_inference_result:
-                raise Exception("Null pointer return from run_inference method in C library")
-            return cvops.schemas.InferenceResult.from_c_type(c_inference_result)
-        except Exception as ex:
+            inference_result = self.session_manager.run_inference(image_bytes)
+            if not inference_result:
+                raise RuntimeError("Null pointer return from run_inference method in C library")
+            # Convert the image bytes to a numpy array
+            image = self.extract_image_to_array(image_bytes)
+            # draw detections on the image numpy array
+            if inference_result.result_type == cvops.schemas.InferenceResultTypes.BOXES:
+                for box in inference_result.boxes:
+                    self.draw_detections(image, box, box.confidence, box.class_id)
+            # return the numpy array
+            return image
+        except Exception as ex:  # pylint: disable=broad-exception-caught
             c_error = self.session_manager.get_error()
             if len(c_error) > 0:
                 err_message = f"Error from C Library: {c_error}"
                 logger.error(err_message)
-                raise Exception(err_message)
+                raise RuntimeError(err_message) from ex
             else:
                 logger.exception(ex)
                 raise ex
 
-    def get_image_bytes(self, image: typing.Union[str, pathlib.Path, io.BytesIO]) -> bytes:
+    def get_image_bytes(self, image: typing.Union[str, pathlib.Path, io.BytesIO, numpy.ndarray]) -> bytes:
+        """ Returns the bytes of the image """
         if isinstance(image, io.BytesIO):
             return image.read()
         elif isinstance(image, str):
             if image.startswith("http"):
-                return requests.get(image).content
+                return requests.get(image, timeout=60).content
             else:
                 if not os.path.exists(image):
                     raise ValueError(f"The path to image ${image} does not exist.")
