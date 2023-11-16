@@ -50,12 +50,11 @@ dev = [
   'pycodestyle>=2.10.0',
   'types-requests>=2.31',
   'cmake>=3.27.7',
-  'ctypesgen>=1.0.2',
 ]
 
 [project.scripts]
 bootstrap = "tools:bootstrap_cmake"
-ctypes_bindings = "tools:generate_ctypes_bindings"
+run_tests = "tools:run_tests"
 
 
 [project.urls]

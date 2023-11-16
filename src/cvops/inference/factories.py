@@ -1,6 +1,10 @@
 #  Factories to generate schemas objects from C types
+import typing
 import ctypes
+import pathlib
+import json
 import cvops.schemas
+import cvops.image_processor
 import cvops.inference.c_interfaces as _types
 
 
@@ -39,3 +43,34 @@ def inference_result_from_c_type(c_inference_result: _types.InferenceResult) -> 
         labels=labels,
         result_type=result_type
     )
+
+def get_c_model_platform(model_platform: cvops.schemas.ModelPlatforms) -> ctypes.c_int:
+    """ Returns the C representation of the model Framework """
+    model_platform = _types.MODEL_PLATFORM_C_MAP.get(model_platform, None)
+    if model_platform is None:
+        raise Exception("Invalid model platform")  # pylint: disable=broad-exception-raised
+    return ctypes.c_int(model_platform)
+
+
+def create_inference_session_request(
+    model_platform: cvops.schemas.ModelPlatforms,
+    model_path: pathlib.Path,
+    metadata: typing.Dict[str, typing.Any],
+    confidence_threshold: float = 0.5,
+    iou_threshold: float = 0.5
+) -> _types.InferenceSessionRequest:
+    """ Creates an InferenceSessionRequest  from the given parameters """
+    c_model_platform = get_c_model_platform(model_platform)
+    c_model_path = ctypes.c_char_p(str(model_path.resolve()).encode('utf-8'))
+    c_metadata = ctypes.c_char_p(json.dumps(metadata).encode('utf-8'))
+    c_confidence_threshold = ctypes.c_float(confidence_threshold)
+    c_iou_threshold = ctypes.c_float(iou_threshold)
+
+    request = _types.InferenceSessionRequest(
+        model_platform=c_model_platform,
+        model_path=c_model_path,
+        metadata=c_metadata,
+        confidence_threshold=c_confidence_threshold,
+        iou_threshold=c_iou_threshold,
+    )
+    return request

@@ -99,8 +99,8 @@ class CLI(object):
             help="Path to the model file to test",
         )
         self.run_inference_parser.add_argument(
-            "-i", "--image-path",
-            help="Path to the image file to run inference on",
+            "-i", "--images-directory",
+            help="Path to a directory containing images to run inference on",
         )
         self.run_inference_parser.add_argument(
             "-p", "--model-platform",
@@ -224,9 +224,14 @@ class CLI(object):
         image_path = pathlib.Path(args.image_path)
         metadata = {}
         if args.metadata_path:
-            with open(args.metadata_path, 'r') as metadata_file:
+            with open(args.metadata_path, 'r', encoding='utf-8') as metadata_file:
                 metadata = json.load(metadata_file)
-        cvops.workflows.test_onnx_inference(model_path, image_path, platform, metadata)
+        cvops.workflows.run_inference_on_directory(
+            image_path,
+            model_path,
+            platform,
+            metadata=metadata
+        )
 
     def deploy_handler(self, args: argparse.Namespace) -> None:  # pylint: disable=unused-argument
         """Handles the deploy command"""

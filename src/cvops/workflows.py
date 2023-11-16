@@ -4,12 +4,13 @@ import typing
 import os
 import pathlib
 import json
-import onnxruntime
-import numpy
+import cv2
 import cvops.util
 import cvops.schemas
 import cvops.deployments
 import cvops.image_processor
+import cvops.inference.factories
+import cvops.inference.manager
 
 
 logger = logging.getLogger(__name__)
@@ -111,4 +112,95 @@ def test_onnx_inference(
         output_path = pathlib.Path(os.getcwd(), "inference_result.png")
         image_processor.visualize_inference(inference_result, output_path)
 
-        
+
+def run_inference_on_directory(
+    input_directory: typing.Union[str, pathlib.Path],
+    model_path: typing.Union[str, pathlib.Path],
+    model_platform: typing.Union[str, cvops.schemas.ModelPlatforms] = cvops.schemas.ModelPlatforms.YOLO,
+    output_directory: typing.Optional[typing.Union[str, pathlib.Path]] = None,
+    metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
+    metadata_path: typing.Optional[typing.Union[str, pathlib.Path]] = None,
+    confidence_threshold: float = 0.5,
+    iou_threshold: float = 0.4,
+) -> typing.List[cvops.schemas.InferenceResult]:
+    """ Runs inference on all images in a directory and saves the results to an output directory
+    
+    Args:
+        input_directory (typing.Union[str, pathlib.Path]): Directory containing images to run inference on
+        model_path (typing.Union[str, pathlib.Path]): Path to the model file
+        model_platform (typing.Union[str, cvops.schemas.ModelPlatforms], optional): Platform for the model. Defaults to cvops.schemas.ModelPlatforms.YOLO.
+        output_directory (typing.Optional[typing.Union[str, pathlib.Path]], optional): Directory to save results to. Defaults to None.
+        metadata (typing.Optional[typing.Dict[str, typing.Any]], optional): Metadata for the model. Defaults to None.
+        metadata_path (typing.Optional[typing.Union[str, pathlib.Path]], optional): Path to metadata JSON file. Defaults to None.
+        confidence_threshold (float, optional): Confidence threshold for inference. Defaults to 0.5.
+        iou_threshold (float, optional): IOU threshold for inference result processing.  Used for NMS supression on overlapping bounding boxes. Defaults to 0.4.
+
+    Returns:
+        typing.List[cvops.schemas.InferenceResult]: List of inference results
+
+    """
+    if isinstance(model_path, str):
+        model_path = pathlib.Path(model_path)
+    if isinstance(model_platform, str):
+        model_platform = cvops.schemas.ModelPlatforms(model_platform)
+    if isinstance(input_directory, str):
+        input_directory = pathlib.Path(input_directory)
+    if input_directory.is_file():
+        raise ValueError("Input directory must be a directory")
+    if not input_directory.exists():
+        raise ValueError("Input directory does not exist")
+    if not model_path.exists():
+        raise ValueError("Model path does not exist")
+    if not output_directory:
+        output_directory = pathlib.Path(os.getcwd(), "out")
+    if isinstance(output_directory, str):
+        output_directory = pathlib.Path(output_directory)
+    if not output_directory.exists():
+        output_directory.mkdir()
+    if not metadata:
+        if metadata_path:
+            if isinstance(metadata_path, str):
+                metadata_path = pathlib.Path(metadata_path)
+            if metadata_path.exists():
+                with open(metadata_path, "r", encoding='utf-8') as metadata_file:
+                    metadata = json.load(metadata_file)
+            else:
+                raise ValueError("Metadata path does not exist")
+        else:
+            metadata = {}
+    
+    session_request = cvops.inference.factories.create_inference_session_request(
+        model_platform,
+        model_path,
+        metadata=metadata,
+        confidence_threshold=confidence_threshold,
+        iou_threshold=iou_threshold
+    )
+    model_classes = session_request.metadata.get("classes", None)
+    num_classes = model_classes.keys().length
+    render_args = {
+        "color_palette": cvops.image_processor.generate_color_palette(num_classes),
+        "classes": model_classes
+    }
+    results = []
+    with cvops.inference.manager.InferenceSessionManager(session_request) as inference_manager:
+        with cvops.inference.manager.InferenceResultRenderer(**render_args) as renderer:
+            for file in input_directory.iterdir():
+                try:
+                    if file.is_file():
+                        if not file.suffix.lower() in [".png", ".jpg", ".jpeg", ".bmp", ".tiff"]:
+                            logger.info("File has invalid image type: %s", file.name)
+                            continue
+                        output_path = pathlib.Path(output_directory, file.name)
+                        image = cvops.image_processor.extract_image(file)
+                        inference_result = inference_manager.run_inference(image)
+                        inference_results_dto = cvops.inference.factories.inference_result_from_c_type(inference_result)
+                        results.append(inference_results_dto)
+                        renderer.render(inference_result, image)
+                        cv2.imwrite(output_path, image)
+                except Exception as ex:  # pylint: disable=broad-except
+                    logger.exception(ex, "Unable to process file: %s", file.name)
+    return results
+    
+
+    

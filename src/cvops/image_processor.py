@@ -14,7 +14,6 @@ import cvops
 import cvops.schemas
 import cvops.util
 import cvops.inference
-import cvops.inference.manager
 
 
 logger = logging.getLogger(__name__)
@@ -50,6 +49,54 @@ class ImageProcessorBase(contextlib.AbstractContextManager, abc.ABC):
         """
         return NotImplemented
 
+def generate_color_palette(num_colors: int) -> typing.Dict[int, typing.Tuple[int, int, int]]:
+    """ Generates a color palette with the given number of colors """
+    color_palette = {}
+    for i in range(num_colors):
+        colors = tuple([int(x) for x in numpy.random.randint(0, 255, size=3)])
+        color_palette[i] = colors
+    return color_palette
+
+def extract_image(image: typing.Union[str, pathlib.Path, io.BytesIO, bytes]) -> numpy.ndarray:
+    """ Loads a image to an numpy.ndarray from a reference """
+    if isinstance(image, numpy.ndarray):
+        return image
+    elif isinstance(image, str):
+        if image.startswith("http"):
+            img_stream = io.BytesIO(requests.get(image, timeout=60).content)
+            return cv2.imdecode(numpy.frombuffer(img_stream.read(), numpy.uint8), 1)
+        else:
+            if not os.path.exists(image):
+                raise ValueError(f"The path to image ${image} does not exist.")
+            return cv2.imread(image)
+    elif isinstance(image, pathlib.Path):
+        return cv2.imread(str(image))
+    elif isinstance(image, io.BytesIO) or isinstance(image, bytes):
+        image_stream = image
+        if isinstance(image_stream, bytes):
+            image_stream = io.BytesIO(image)                
+        return cv2.imdecode(numpy.frombuffer(image_stream.read(), numpy.uint8), 1)
+    else:
+        raise TypeError(f"The type ${image.__class__.__name__} is not support for reading")
+
+def image_to_bytes(image: typing.Union[numpy.ndarray, str, pathlib.Path, io.BytesIO]) -> bytes:
+    """ Returns the bytes of the image """
+    if isinstance(image, io.BytesIO):
+        return image.read()
+    elif isinstance(image, str):
+        if image.startswith("http"):
+            return requests.get(image, timeout=60).content
+        else:
+            if not os.path.exists(image):
+                raise ValueError(f"The path to image ${image} does not exist.")
+            return open(image, "rb").read()
+    elif isinstance(image, pathlib.Path):
+        return open(str(image), "rb").read()
+    elif isinstance(image, numpy.ndarray):
+        return cv2.imencode('.png', image)[1].tobytes()
+    else:
+        raise TypeError(f"The type ${image.__class__.__name__} is not support for reading")
+
 class ImageUtilsMixIn(abc.ABC):
     """ Mixin with utility methods for working with images """
     _color_palette: typing.Dict[int, typing.Tuple[int, int, int]]
@@ -68,15 +115,7 @@ class ImageUtilsMixIn(abc.ABC):
         if not self._color_palette:
             if metadata.get("color_palette", None):
                 self._color_palette = metadata.get("color_palette")
-            self._color_palette = self.generate_color_palette(len(self.classes))
-
-    def generate_color_palette(self, num_colors: int) -> typing.Dict[int, typing.Tuple[int, int, int]]:
-        """ Generates a color palette with the given number of colors """
-        color_palette = {}
-        for i in range(num_colors):
-            colors = tuple([int(x) for x in numpy.random.randint(0, 255, size=3)])
-            color_palette[i] = colors
-        return color_palette
+            self._color_palette = generate_color_palette(len(self.classes))
 
     @property
     def classes(self) -> typing.Dict[int, str]:
@@ -147,25 +186,7 @@ class ImageUtilsMixIn(abc.ABC):
 
     def extract_image_to_array(self, image: typing.Union[str, pathlib.Path, io.BytesIO, bytes]) -> numpy.ndarray:
         """ Loads a image to an numpy.ndarray from a reference """
-        if isinstance(image, numpy.ndarray):
-            return image
-        elif isinstance(image, str):
-            if image.startswith("http"):
-                img_stream = io.BytesIO(requests.get(image, timeout=60).content)
-                return cv2.imdecode(numpy.frombuffer(img_stream.read(), numpy.uint8), 1)
-            else:
-                if not os.path.exists(image):
-                    raise ValueError(f"The path to image ${image} does not exist.")
-                return cv2.imread(image)
-        elif isinstance(image, pathlib.Path):
-            return cv2.imread(str(image))
-        elif isinstance(image, io.BytesIO) or isinstance(image, bytes):
-            image_stream = image
-            if isinstance(image_stream, bytes):
-                image_stream = io.BytesIO(image)                
-            return cv2.imdecode(numpy.frombuffer(image_stream.read(), numpy.uint8), 1)
-        else:
-            raise TypeError(f"The type ${image.__class__.__name__} is not support for reading")
+        return extract_image(image)
     
 
 
@@ -348,114 +369,100 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
         return img
 
 
-class AcceleratedImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
-    """ A Ctypes implementation of the ImageProcessor """
-    session_manager: cvops.inference.manager.InferenceSessionManager
-    model_path = pathlib.Path
-    model_platform: cvops.schemas.ModelPlatforms
-    confidence_threshold: float
-    iou_threshold: float
-    metadata: typing.Dict[str, typing.Any]
-    _inside_context_manager: bool
+# class AcceleratedImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
+#     """ A Ctypes implementation of the ImageProcessor """
+#     session_manager: cvops.inference.manager.InferenceSessionManager
+#     model_path = pathlib.Path
+#     model_platform: cvops.schemas.ModelPlatforms
+#     confidence_threshold: float
+#     iou_threshold: float
+#     metadata: typing.Dict[str, typing.Any]
+#     _inside_context_manager: bool
 
 
-    def __init__(self,
-                 *args,
-                 model_platform: cvops.schemas.ModelPlatforms,
-                 model_path: pathlib.Path,
-                 confidence_threshold: float = 0.5,
-                 iou_threshold: float = 0.5,
-                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
-                 **kwargs) -> None:
-        super().__init__(*args, 
-            model_platform=model_platform,
-            model_path=model_path,
-            confidence_threshold=confidence_threshold,
-            iou_threshold=iou_threshold,
-            metadata=metadata,
-            **kwargs
-        )
-        self._inside_context_manager = False
-        self.model_platform = model_platform
-        if not os.path.exists(model_path):
-            raise ValueError(f"Model cannot be found at {model_path}")
-        self.model_path = model_path
-        self.onnx_session = onnxruntime.InferenceSession(str(self.model_path))
-        self.confidence_threshold = confidence_threshold
-        self.iou_threshold = iou_threshold
-        self.metadata = metadata or {}
-        self.session_manager = cvops.inference.manager.InferenceSessionManager()
+#     def __init__(self,
+#                  *args,
+#                  model_platform: cvops.schemas.ModelPlatforms,
+#                  model_path: pathlib.Path,
+#                  confidence_threshold: float = 0.5,
+#                  iou_threshold: float = 0.5,
+#                  metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
+#                  **kwargs) -> None:
+#         super().__init__(*args, 
+#             model_platform=model_platform,
+#             model_path=model_path,
+#             confidence_threshold=confidence_threshold,
+#             iou_threshold=iou_threshold,
+#             metadata=metadata,
+#             **kwargs
+#         )
+#         self._inside_context_manager = False
+#         self.model_platform = model_platform
+#         if not os.path.exists(model_path):
+#             raise ValueError(f"Model cannot be found at {model_path}")
+#         self.model_path = model_path
+#         self.onnx_session = onnxruntime.InferenceSession(str(self.model_path))
+#         self.confidence_threshold = confidence_threshold
+#         self.iou_threshold = iou_threshold
+#         self.metadata = metadata or {}
+#         self.session_manager = cvops.inference.manager.InferenceSessionManager()
 
-    def __enter__(self) -> "AcceleratedImageProcessor":
-        try:
-            self._inside_context_manager = True
-            self.session_manager.start_session(
-                self.model_platform,
-                self.model_path,
-                self.metadata,
-                self.confidence_threshold,
-                self.iou_threshold)
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.exception(e)
-        return self
+#     def __enter__(self) -> "AcceleratedImageProcessor":
+#         try:
+#             self._inside_context_manager = True
+#             self.session_manager.start_session(
+#                 self.model_platform,
+#                 self.model_path,
+#                 self.metadata,
+#                 self.confidence_threshold,
+#                 self.iou_threshold)
+#         except Exception as e:  # pylint: disable=broad-exception-caught
+#             logger.exception(e)
+#         return self
     
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
-        try:
-            self.session_manager.close_session()
-        except Exception:  # pylint: disable=broad-exception-caught
-            error = self.session_manager.dll.error_message() or ""
-            if (error):
-                logger.error(error)
-        finally:
-            self._inside_context_manager = False
+#     def __exit__(self, exc_type, exc_value, traceback) -> None:
+#         try:
+#             self.session_manager.close_session()
+#         except Exception:  # pylint: disable=broad-exception-caught
+#             error = self.session_manager.dll.error_message() or ""
+#             if (error):
+#                 logger.error(error)
+#         finally:
+#             self._inside_context_manager = False
 
 
-    def run(self, image: typing.Union[str, pathlib.Path, io.BytesIO]) -> numpy.ndarray:
-        if not self._inside_context_manager:
-            raise RuntimeError("The image processor must be used as a context manager")
-        image_bytes = self.get_image_bytes(image)
-        try:
-            inference_result = self.session_manager.run_inference(image_bytes)
-            if not inference_result:
-                raise RuntimeError("Null pointer return from run_inference method in C library")
-            # Convert the image bytes to a numpy array
-            image = self.extract_image_to_array(image_bytes)
-            # draw detections on the image numpy array
-            if inference_result.result_type == cvops.schemas.InferenceResultTypes.BOXES:
-                for box in inference_result.boxes:
-                    self.draw_detections(image, box, box.confidence, box.class_id)
-            # return the numpy array
-            return image
-        except Exception as ex:  # pylint: disable=broad-exception-caught
-            c_error = self.session_manager.get_error()
-            if len(c_error) > 0:
-                err_message = f"Error from C Library: {c_error}"
-                logger.error(err_message)
-                raise RuntimeError(err_message) from ex
-            else:
-                logger.exception(ex)
-                raise ex
+#     def run(self, image: typing.Union[str, pathlib.Path, io.BytesIO]) -> numpy.ndarray:
+#         if not self._inside_context_manager:
+#             raise RuntimeError("The image processor must be used as a context manager")
+#         image_bytes = self.get_image_bytes(image)
+#         try:
+#             inference_result = self.session_manager.run_inference(image_bytes)
+#             if not inference_result:
+#                 raise RuntimeError("Null pointer return from run_inference method in C library")
+#             # Convert the image bytes to a numpy array
+#             image = self.extract_image_to_array(image_bytes)
+#             # draw detections on the image numpy array
+#             if inference_result.result_type == cvops.schemas.InferenceResultTypes.BOXES:
+#                 for box in inference_result.boxes:
+#                     self.draw_detections(image, box, box.confidence, box.class_id)
+#             # return the numpy array
+#             return image
+#         except Exception as ex:  # pylint: disable=broad-exception-caught
+#             c_error = self.session_manager.get_error()
+#             if len(c_error) > 0:
+#                 err_message = f"Error from C Library: {c_error}"
+#                 logger.error(err_message)
+#                 raise RuntimeError(err_message) from ex
+#             else:
+#                 logger.exception(ex)
+#                 raise ex
 
-    def get_image_bytes(self, image: typing.Union[str, pathlib.Path, io.BytesIO, numpy.ndarray]) -> bytes:
-        """ Returns the bytes of the image """
-        if isinstance(image, io.BytesIO):
-            return image.read()
-        elif isinstance(image, str):
-            if image.startswith("http"):
-                return requests.get(image, timeout=60).content
-            else:
-                if not os.path.exists(image):
-                    raise ValueError(f"The path to image ${image} does not exist.")
-                return open(image, "rb").read()
-        elif isinstance(image, pathlib.Path):
-            return open(str(image), "rb").read()
-        elif isinstance(image, numpy.ndarray):
-            return cv2.imencode('.png', image)[1].tobytes()
-        else:
-            raise TypeError(f"The type ${image.__class__.__name__} is not support for reading")
+#     def get_image_bytes(self, image: typing.Union[str, pathlib.Path, io.BytesIO, numpy.ndarray]) -> bytes:
+#         """ Returns the bytes of the image """
+#         return image_to_bytes(image)
 
-    def preprocess_image(self, img: numpy.ndarray) -> numpy.ndarray:
-        pass
+#     def preprocess_image(self, img: numpy.ndarray) -> numpy.ndarray:
+#         pass
 
-    def postprocess_image(self, img: numpy.ndarray, output: numpy.ndarray) -> numpy.ndarray:
-        pass
+#     def postprocess_image(self, img: numpy.ndarray, output: numpy.ndarray) -> numpy.ndarray:
+#         pass

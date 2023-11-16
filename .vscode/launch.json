@@ -65,6 +65,16 @@
             ],
             "justMyCode": true
         },
-        
+        {
+            "name": "Run Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "tests",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        }
     ]
 }

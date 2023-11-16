@@ -1,4 +1,6 @@
+""" DTOs between the CVOps C library and the Python library """
 import ctypes
+import cvops.schemas
 
 c_float_p = ctypes.POINTER(ctypes.c_float)
 
@@ -40,6 +42,7 @@ class Box(ctypes.Structure):
         ("confidence", ctypes.c_float),
     ]
 
+
 c_box_p = ctypes.POINTER(Box)
 
 
@@ -59,9 +62,12 @@ c_inference_result_p = ctypes.POINTER(InferenceResult)
 
 
 class IInferenceManager(ctypes.Structure):
-    pass
+    """ Interface for the inference manager """
 
 c_i_inference_manager_p = ctypes.POINTER(IInferenceManager)
 
 
-
+MODEL_PLATFORM_C_MAP = {
+    cvops.schemas.ModelPlatforms.YOLO: 1,
+    cvops.schemas.ModelPlatforms.DETECTRON: 2,
+}

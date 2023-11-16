@@ -31,3 +31,7 @@ class CApi(object):
         self.dll.end_inference_session.argtypes = [_types.c_i_inference_manager_p]
         self.dll.end_inference_session.restype = None
         self.dll.error_message.restype = ctypes.c_char_p
+        self.dll.set_color_palette.argtypes = [ctypes.c_char_p]
+        self.dll.set_color_palette.restype = None
+        self.dll.free_color_palette.argtypes = []
+        self.dll.free_color_palette.restype = None
