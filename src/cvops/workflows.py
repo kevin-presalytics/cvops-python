@@ -214,7 +214,7 @@ def run_inference_on_directory(
                             if isinstance(output_directory, pathlib.Path) \
                             else pathlib.Path(output_directory.name).joinpath(file.name)
                         image = cvops.image_processor.extract_image(file)
-                            
+
                         inference_result_ptr = inference_manager.run_inference(image)
                         inference_results_dto = cvops.inference.factories.inference_result_from_c_type(
                             inference_result_ptr)
