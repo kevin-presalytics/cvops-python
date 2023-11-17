@@ -101,12 +101,11 @@ class InferenceSessionManager(cvops.inference.c_api.CApi):
         detections = []
         for i in range(num_inferences):
             result_ptr = self.run_inference(image, name, draw_detections)
-            results.append(result_ptr)  
+            results.append(result_ptr)
             detections.append(result_ptr.contents.boxes_count)
-        
+
         mode = max(set(detections), key=detections.count)
         return next(result for result in results if result.contents.boxes_count == mode)
-
 
     def get_error(self) -> str:
         """ Gets error message from the C Library's global error container """
@@ -176,7 +175,7 @@ class InferenceResultRenderer(cvops.inference.c_api.CApi):
         # Channels per https://stackoverflow.com/a/53758304/16580040
         num_channels = image.shape[-1] if image.ndim == 3 else 1
         self.dll.render_inference_result(
-            inference_result_ptr, 
+            inference_result_ptr,
             image.ctypes._data,  # pylint: disable=protected-access
             image.shape[0],
             image.shape[1],

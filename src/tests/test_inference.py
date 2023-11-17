@@ -43,7 +43,8 @@ class InferenceTests(unittest.TestCase):
             output_directory=self.output_dir,
             model_platform=cvops.schemas.ModelPlatforms.YOLO,
             confidence_threshold=0.5,
-            iou_threshold=0.4
+            iou_threshold=0.4,
+            use_error_correction=False,
         )
 
         # Assert

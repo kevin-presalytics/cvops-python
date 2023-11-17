@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 # Singleton instance of the loaded C library
 __instance__: ctypes.CDLL = None
 
+
 def get_dll_instance():
     """ Returns the C Library dll singleton """
     return __instance__

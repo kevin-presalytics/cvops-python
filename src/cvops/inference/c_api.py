@@ -47,4 +47,3 @@ class CApi(object):
             ctypes.c_int,
         ]
         self.dll.render_inference_result.restype = None
-        

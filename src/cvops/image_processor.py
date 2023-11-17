@@ -89,7 +89,6 @@ def extract_image(image: typing.Union[str, pathlib.Path, io.BytesIO, bytes],
     return new_image
 
 
-
 def image_to_bytes(image: typing.Union[numpy.ndarray, str, pathlib.Path, io.BytesIO]) -> bytes:
     """ Returns the bytes of the image """
     if isinstance(image, io.BytesIO):

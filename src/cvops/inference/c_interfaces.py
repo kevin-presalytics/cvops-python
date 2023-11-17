@@ -66,8 +66,8 @@ c_inference_result_p = ctypes.POINTER(InferenceResult)
 
 
 def dispose_inference_result(result: c_inference_result_p) -> None:
-    """ Disposes the inference result 
-    Notes: 
+    """ Disposes the inference result
+    Notes:
         * This is called by the python garbage collector when the object is no longer referenced
         * Import is inside the function to avoid circular imports
     """

@@ -175,11 +175,11 @@ def run_inference_on_directory(
                 raise ValueError("Metadata path does not exist")
         else:
             metadata = {}
-    
+
     assert isinstance(metadata, dict), "Metadata must be a dictionary"
     assert isinstance(confidence_threshold, float), "Confidence threshold must be a float"
     assert isinstance(iou_threshold, float), "IOU threshold must be a float"
-    
+
     model_classes = metadata.get("classes", None)
     if not model_classes:
         raise ValueError("Metadata must contain classes")
@@ -217,9 +217,10 @@ def run_inference_on_directory(
                         image = cvops.image_processor.extract_image(file)
                         if use_error_correction:
                             inference_result_ptr = inference_manager.multi_run_inference(image)
-                        else:    
+                        else:
                             inference_result_ptr = inference_manager.run_inference(image)
-                        inference_results_dto = cvops.inference.factories.inference_result_from_c_type(inference_result_ptr)
+                        inference_results_dto = cvops.inference.factories.inference_result_from_c_type(
+                            inference_result_ptr)
                         results.append(inference_results_dto)
                         renderer.render(inference_result_ptr, image)
                         cv2.imwrite(str(output_path), image)
