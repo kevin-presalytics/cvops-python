@@ -4,7 +4,9 @@ import typing
 import os
 import pathlib
 import json
+import tempfile
 import cv2
+import numpy
 import cvops.util
 import cvops.schemas
 import cvops.deployments
@@ -68,7 +70,7 @@ def deploy_YOLOv8(
         target_file_path = pathlib.Path(os.getcwd(), "yolov8n-seg.pt")
         cvops.util.download_file(YOLO_SEGMENT_URL, target_file_path)
     cvops.util.export_to_onnx(target_file_path, cvops.schemas.ModelPlatforms.YOLO, kwargs)
-    model_file = target_file_path.with_suffix(".onnx") 
+    model_file = target_file_path.with_suffix(".onnx")
     deploy_onnx_model(model_file, device_ids, **kwargs)
     os.remove(target_file_path)
     os.remove(model_file)
@@ -100,7 +102,7 @@ def test_onnx_inference(
         model_platform = cvops.schemas.ModelPlatforms(model_platform)
     if isinstance(image_path, str):
         image_path = pathlib.Path(image_path)
-        
+
     args = {
         "model_platform": model_platform,
         "model_path": model_path,
@@ -117,14 +119,16 @@ def run_inference_on_directory(
     input_directory: typing.Union[str, pathlib.Path],
     model_path: typing.Union[str, pathlib.Path],
     model_platform: typing.Union[str, cvops.schemas.ModelPlatforms] = cvops.schemas.ModelPlatforms.YOLO,
-    output_directory: typing.Optional[typing.Union[str, pathlib.Path]] = None,
+    output_directory: typing.Optional[typing.Union[str, pathlib.Path, tempfile.TemporaryDirectory]] = None,
     metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
     metadata_path: typing.Optional[typing.Union[str, pathlib.Path]] = None,
+    color_palette: typing.Optional[typing.List[typing.Tuple[int, int, int]]] = None,
     confidence_threshold: float = 0.5,
     iou_threshold: float = 0.4,
+    use_error_correction: bool = True
 ) -> typing.List[cvops.schemas.InferenceResult]:
     """ Runs inference on all images in a directory and saves the results to an output directory
-    
+
     Args:
         input_directory (typing.Union[str, pathlib.Path]): Directory containing images to run inference on
         model_path (typing.Union[str, pathlib.Path]): Path to the model file
@@ -155,8 +159,11 @@ def run_inference_on_directory(
         output_directory = pathlib.Path(os.getcwd(), "out")
     if isinstance(output_directory, str):
         output_directory = pathlib.Path(output_directory)
-    if not output_directory.exists():
-        output_directory.mkdir()
+
+    # Create output directory if it doesn't exist and it is not a temporary directory
+    if isinstance(output_directory, pathlib.Path):
+        if not output_directory.exists():
+            output_directory.mkdir()
     if not metadata:
         if metadata_path:
             if isinstance(metadata_path, str):
@@ -169,6 +176,17 @@ def run_inference_on_directory(
         else:
             metadata = {}
     
+    assert isinstance(metadata, dict), "Metadata must be a dictionary"
+    assert isinstance(confidence_threshold, float), "Confidence threshold must be a float"
+    assert isinstance(iou_threshold, float), "IOU threshold must be a float"
+    
+    model_classes = metadata.get("classes", None)
+    if not model_classes:
+        raise ValueError("Metadata must contain classes")
+
+    assert isinstance(model_classes, dict), "Classes must be a dictionary"
+    assert all(isinstance(value, str) for value in model_classes.values()), "Classes values (names) must be strings"
+
     session_request = cvops.inference.factories.create_inference_session_request(
         model_platform,
         model_path,
@@ -176,10 +194,12 @@ def run_inference_on_directory(
         confidence_threshold=confidence_threshold,
         iou_threshold=iou_threshold
     )
-    model_classes = session_request.metadata.get("classes", None)
-    num_classes = model_classes.keys().length
+
+    num_classes = len(model_classes.keys())
+    if not color_palette:
+        color_palette = cvops.image_processor.generate_color_palette(num_classes)
     render_args = {
-        "color_palette": cvops.image_processor.generate_color_palette(num_classes),
+        "color_palette": color_palette,
         "classes": model_classes
     }
     results = []
@@ -191,16 +211,19 @@ def run_inference_on_directory(
                         if not file.suffix.lower() in [".png", ".jpg", ".jpeg", ".bmp", ".tiff"]:
                             logger.info("File has invalid image type: %s", file.name)
                             continue
-                        output_path = pathlib.Path(output_directory, file.name)
+                        output_path = output_directory.joinpath(file.name) \
+                            if isinstance(output_directory, pathlib.Path) \
+                            else pathlib.Path(output_directory.name).joinpath(file.name)
                         image = cvops.image_processor.extract_image(file)
-                        inference_result = inference_manager.run_inference(image)
-                        inference_results_dto = cvops.inference.factories.inference_result_from_c_type(inference_result)
+                        if use_error_correction:
+                            inference_result_ptr = inference_manager.multi_run_inference(image)
+                        else:    
+                            inference_result_ptr = inference_manager.run_inference(image)
+                        inference_results_dto = cvops.inference.factories.inference_result_from_c_type(inference_result_ptr)
                         results.append(inference_results_dto)
-                        renderer.render(inference_result, image)
-                        cv2.imwrite(output_path, image)
+                        renderer.render(inference_result_ptr, image)
+                        cv2.imwrite(str(output_path), image)
                 except Exception as ex:  # pylint: disable=broad-except
                     logger.exception(ex, "Unable to process file: %s", file.name)
+    logger.debug("Average Inference time: %s milliseconds", numpy.average([r.milliseconds for r in results]))
     return results
-    
-
-    

@@ -1,9 +1,13 @@
-# This file contains helper functions for the build process
+""" This file contains helper functions for the build processes and developer workflows """
 import subprocess
 import pathlib
 import shutil
 import unittest
 import sys
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 ROOT_DIR = pathlib.Path(__file__).parent.parent.parent.absolute()
@@ -40,10 +44,17 @@ CMAKE_BUILD_COMMAND = [
     C_BUILD_DIR,
 ]
 
+
 def bootstrap_cmake():
     """Builds the cvops-inference submodule and copies the built library to the to inference directory """
-    subprocess.run(CMAKE_CONFIGURE_COMMAND, cwd=C_SOURCE_DIR, check=True)
-    subprocess.run(CMAKE_BUILD_COMMAND, cwd=C_SOURCE_DIR, check=True)
+    try:
+        subprocess.run(CMAKE_CONFIGURE_COMMAND, cwd=C_SOURCE_DIR, check=True)
+        subprocess.run(CMAKE_BUILD_COMMAND, cwd=C_SOURCE_DIR, check=True)
+    except FileNotFoundError as f_err:
+        message = "Invalid path to C library source directory.  Did you install the project in editable mode using `pip install -e .[dev]`?"
+        raise RuntimeError(message) from f_err
+    except Exception as ex:  # pylint: disable=broad-exception-caught
+        logger.exception(ex, "Unable to build C library")
 
     target_lib_dir = pathlib.Path(ROOT_DIR, "src", "cvops", "inference", "lib")
 
@@ -56,9 +67,33 @@ def bootstrap_cmake():
 
 
 def run_tests():
-    """Runs the tests"""
-    print("Inside run tests")
-    bootstrap_cmake()
-    from tests import run_tests
-    run_tests()
-    
+    """ Runs all tests """
+    try:
+        bootstrap_cmake()
+        from tests import test_all  # pylint: disable=import-outside-toplevel
+        test_all()
+    except Exception as ex:  # pylint: disable=broad-except
+        logger.exception(ex, "Unable to run tests")
+        sys.exit(1)
+
+
+PRE_COMMIT_FILE_CONTENTS = """#!/bin/sh
+. venv/bin/activate
+python -m autopep8 ./src
+run_tests
+"""
+
+
+PRE_COMMIT_FILE_PATH = ROOT_DIR.joinpath(".git", "hooks", "pre-commit")
+
+
+def install_pre_commit_hooks():
+    """ Installs the pre-commit hooks """
+    with open(PRE_COMMIT_FILE_PATH, "w", encoding='utf-8') as pre_commit_file:
+        pre_commit_file.write(PRE_COMMIT_FILE_CONTENTS)
+    PRE_COMMIT_FILE_PATH.chmod(0o755)
+
+
+def install_hooks():
+    """ Installs the pre-commit hooks """
+    install_pre_commit_hooks()

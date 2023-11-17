@@ -1,5 +1,6 @@
 """ Wraps the DLL and provides a pythonic interface to the C API """
 import ctypes
+import numpy
 import cvops.inference.c_interfaces as _types
 import cvops.inference.loader
 
@@ -13,6 +14,7 @@ class CApi(object):
         self.loader.load()
         if not self.dll:
             raise Exception("Dll unable to load")  # pylint: disable=broad-exception-raised
+        #  if not is_loaded:
         self._bind_function_definitions()
 
     @property
@@ -35,3 +37,14 @@ class CApi(object):
         self.dll.set_color_palette.restype = None
         self.dll.free_color_palette.argtypes = []
         self.dll.free_color_palette.restype = None
+        self.dll.dispose_inference_result.argtypes = [_types.c_inference_result_p]
+        self.dll.dispose_inference_result.restype = None
+        self.dll.render_inference_result.argtypes = [
+            _types.c_inference_result_p,
+            ctypes.c_void_p,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+        ]
+        self.dll.render_inference_result.restype = None
+        

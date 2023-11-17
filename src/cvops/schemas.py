@@ -9,7 +9,6 @@ import pydantic.alias_generators
 import cvops.config
 
 
-
 def now():
     """ Returns the current time in UTC"""
     return datetime.datetime.now(datetime.timezone.utc)
@@ -165,6 +164,7 @@ class DeploymentCreatedPayload(pydantic.BaseModel):
     object_name: typing.Optional[str] = None
     ml_model_metadata: typing.Dict[str, typing.Any] = pydantic.Field({}, alias="modelMetadata")
 
+
 class DeploymentMessageTypes(LowerCaseEnum):
     """ Message type on the deployment channel"""
     CREATED = "Created"
@@ -254,6 +254,7 @@ class Box(pydantic.BaseModel):
     def __iter__(self):
         return iter((self.x, self.y, self.width, self.height))
 
+
 class Label(pydantic.BaseModel):
     """ DTO for detected classes """
     class_id: int
@@ -270,8 +271,9 @@ class InferenceResult(TimeSeriesEntity):
     model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
     boxes: typing.List[typing.Dict[str, typing.Any]] = []
     workspace_id: typing.Optional[str] = None
-    device_id: typing.Optional[str] = None
+    device_id: str = cvops.config.SETTINGS.device_id
     result_type: InferenceResultTypes = InferenceResultTypes.BOXES
     boxes: typing.Optional[typing.Sequence[Box]] = []
     meshes: typing.Optional[typing.Sequence] = []
-    labels:  typing.Optional[typing.Sequence] = []
+    labels: typing.Optional[typing.Sequence] = []
+    milliseconds: float = 0.0

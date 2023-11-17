@@ -105,7 +105,6 @@ class MqttManager(object):
     on_message_callback: typing.Callable[[mqtt.Client, object, mqtt.MQTTMessage], None]
     on_disconnect_callback: typing.Callable[[mqtt.Client, object, int], None]
     is_connecting: bool
-    
 
     _subscription_registry: typing.Dict[str, typing.Optional[typing.Callable[[str], None]]]
     _message_queue: typing.List[MqttMessage]

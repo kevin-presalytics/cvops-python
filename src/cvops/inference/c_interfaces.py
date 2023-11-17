@@ -15,7 +15,9 @@ class InferenceSessionRequest(ctypes.Structure):
         ("iou_threshold", ctypes.c_float),
     ]
 
+
 c_inference_session_request_p = ctypes.POINTER(InferenceSessionRequest)
+
 
 class InferenceRequest(ctypes.Structure):
     """ Class to represent an inference request """
@@ -25,6 +27,7 @@ class InferenceRequest(ctypes.Structure):
         ("size", ctypes.c_int),
         ("draw_detections", ctypes.c_bool),
     ]
+
 
 c_inference_request_p = ctypes.POINTER(InferenceRequest)
 
@@ -55,14 +58,30 @@ class InferenceResult(ctypes.Structure):
         ("image_size", ctypes.c_int),
         ("image_width", ctypes.c_int),
         ("image_height", ctypes.c_int),
+        ("milliseconds", ctypes.c_float),
     ]
 
 
 c_inference_result_p = ctypes.POINTER(InferenceResult)
 
 
+def dispose_inference_result(result: c_inference_result_p) -> None:
+    """ Disposes the inference result 
+    Notes: 
+        * This is called by the python garbage collector when the object is no longer referenced
+        * Import is inside the function to avoid circular imports
+    """
+    import cvops.inference.loader  # pylint: disable=import-outside-toplevel, redefined-outer-name
+    dll = cvops.inference.loader.get_dll_instance()
+    dll.dispose_inference_result(result)
+
+
+c_inference_result_p.__del__ = dispose_inference_result
+
+
 class IInferenceManager(ctypes.Structure):
     """ Interface for the inference manager """
+
 
 c_i_inference_manager_p = ctypes.POINTER(IInferenceManager)
 

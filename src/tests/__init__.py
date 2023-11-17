@@ -9,14 +9,21 @@ PACKAGE_DIR = ROOT_DIR.joinpath("src", "cvops")
 
 sys.path.insert(0, str(PACKAGE_DIR))
 
-def test_suite():
-    """ Collects tests into test suite """
-    suite = unittest.TestSuite()
-    suite.addTest(tests.test_inference.TestInference("test_inference"))
-    return suite
+# Add modules to this list to run them during CI/CD pipelines and pre-commit hooks
+ALL_TEST_MODULES = [
+    tests.test_inference,
+]
 
-def run_tests():
+
+def test_all():
     """ Runs all tests """
     runner = unittest.TextTestRunner()
-    suite = test_suite()
-    runner.run(suite)
+    failed = False
+    for module in ALL_TEST_MODULES:
+        suite = unittest.defaultTestLoader.loadTestsFromModule(module)
+        result = runner.run(suite)
+        if not result.wasSuccessful():
+            # Required for pre-commit hook to fail
+            failed = True
+    if failed:
+        sys.exit(1)

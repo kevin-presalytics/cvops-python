@@ -10,6 +10,13 @@ import cvops.config
 
 logger = logging.getLogger(__name__)
 
+# Singleton instance of the loaded C library
+__instance__: ctypes.CDLL = None
+
+def get_dll_instance():
+    """ Returns the C Library dll singleton """
+    return __instance__
+
 
 class DllLoader(object):
     """ Loads the C library """
@@ -23,8 +30,6 @@ class DllLoader(object):
     processor: str
     debug: bool
 
-
-
     def __init__(self, debug: typing.Optional[bool] = None):
         if debug is None:
             self.debug = cvops.config.SETTINGS.debug
@@ -37,18 +42,28 @@ class DllLoader(object):
         else:
             self.library_path = pathlib.Path(__file__).parent.joinpath("lib")
         self.dll_path = self.get_dll_path()
-        self.dll = None
 
-    def load(self):
-        """ Loads the dll """
+    @property
+    def dll(self):
+        """ Returns the dll object """
+        return get_dll_instance()
+
+    @dll.setter
+    def dll(self, value):
+        """ Sets the dll object """
+        global __instance__  # pylint: disable=global-statement
+        __instance__ = value
+
+    def load(self) -> bool:
+        """ Loads the dll, return bool indicating if the dll was loaded.  False indicates the dll was already loaded """
         if self.dll is None:
             self.dll = ctypes.cdll.LoadLibrary(self.dll_path)
             if self.debug:
-                # Note: Set breakpoints here to debug the c lbirary by attaching to the process
                 logger.debug("DLL loaded in process: %s", os.getpid())
+                # Note: Set breakpoints here to debug the c lbirary by attaching to the process
                 logger.debug("Loaded dll: %s", self.dll_path)
-                
-            
+            return True
+        return False
 
     def get_file_extension(self):
         """ Returns dll's file extension based on the system """
@@ -59,7 +74,7 @@ class DllLoader(object):
         elif self.system == "Darwin":
             return ".dylib"
         else:
-            raise Exception("Unsupported system")
+            raise RuntimeError("Unsupported system")
 
     def check_compatbility(self):
         if self.system == "Windows":
@@ -71,7 +86,7 @@ class DllLoader(object):
             if self.processor == "x86_64":
                 return True
             elif self.processor == "aarch64":
-                return False # TODO: Add support for Linux ARM
+                return False  # TODO: Add support for Linux ARM
             else:
                 return False
         elif self.system == "Darwin":  # TODO: Add support for MacOS
@@ -81,7 +96,6 @@ class DllLoader(object):
                 return False
         else:
             raise Exception(f"Unsupported system: System: {self.system}, Processor: {self.processor}")
-
 
     def get_dll_path(self):
         if self.check_compatbility():

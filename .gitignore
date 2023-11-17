@@ -18,3 +18,4 @@ cmake/cvops_*
 cmake/Makefile
 cmake/CMakeCache.txt
 cmake/*.cmake`
+out/

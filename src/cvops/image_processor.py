@@ -1,3 +1,4 @@
+""" Classes and methods for processing images """
 import abc
 import typing
 import io
@@ -24,19 +25,19 @@ class ImageProcessorBase(contextlib.AbstractContextManager, abc.ABC):
 
     @abc.abstractmethod
     def run(self, image: typing.Union[str, pathlib.Path, io.BytesIO, numpy.ndarray]) -> numpy.ndarray:
-        """ Runs inference on the given image 
+        """ Runs inference on the given image
 
             The implementation of this method typically invokes the following methods:
             1. preprocess_image
             2. postprocess_image
         """
         return NotImplemented
-    
+
     @abc.abstractmethod
     def preprocess_image(self, img: numpy.ndarray) -> numpy.ndarray:
         """ Converts an image to a numpy array for model input"""
         return NotImplemented
-    
+
     @abc.abstractmethod
     def postprocess_image(self, img: numpy.ndarray, output: numpy.ndarray) -> numpy.ndarray:
         """ Updates the image to display the results of the inference
@@ -45,9 +46,10 @@ class ImageProcessorBase(contextlib.AbstractContextManager, abc.ABC):
             output: The output of the model.
 
             Returns: The input image with detections drawn on it as a numpy.ndarray.
-            Can be written to disk with cv2.imwrite        
+            Can be written to disk with cv2.imwrite
         """
         return NotImplemented
+
 
 def generate_color_palette(num_colors: int) -> typing.Dict[int, typing.Tuple[int, int, int]]:
     """ Generates a color palette with the given number of colors """
@@ -57,27 +59,36 @@ def generate_color_palette(num_colors: int) -> typing.Dict[int, typing.Tuple[int
         color_palette[i] = colors
     return color_palette
 
-def extract_image(image: typing.Union[str, pathlib.Path, io.BytesIO, bytes]) -> numpy.ndarray:
+
+def extract_image(image: typing.Union[str, pathlib.Path, io.BytesIO, bytes],
+                  as_uint8: bool = True
+                  ) -> numpy.ndarray:
     """ Loads a image to an numpy.ndarray from a reference """
+    new_image = None
     if isinstance(image, numpy.ndarray):
-        return image
+        new_image = image
     elif isinstance(image, str):
         if image.startswith("http"):
             img_stream = io.BytesIO(requests.get(image, timeout=60).content)
-            return cv2.imdecode(numpy.frombuffer(img_stream.read(), numpy.uint8), 1)
+            new_image = cv2.imdecode(numpy.frombuffer(img_stream.read(), numpy.uint8), 1)
         else:
             if not os.path.exists(image):
                 raise ValueError(f"The path to image ${image} does not exist.")
-            return cv2.imread(image)
+            new_image = cv2.imread(image)
     elif isinstance(image, pathlib.Path):
-        return cv2.imread(str(image))
+        new_image = cv2.imread(str(image))
     elif isinstance(image, io.BytesIO) or isinstance(image, bytes):
         image_stream = image
         if isinstance(image_stream, bytes):
-            image_stream = io.BytesIO(image)                
-        return cv2.imdecode(numpy.frombuffer(image_stream.read(), numpy.uint8), 1)
+            image_stream = io.BytesIO(image)
+        new_image = cv2.imdecode(numpy.frombuffer(image_stream.read(), numpy.uint8), 1)
     else:
         raise TypeError(f"The type ${image.__class__.__name__} is not support for reading")
+    if as_uint8 and new_image.dtype != numpy.uint8:
+        new_image = new_image.astype(numpy.uint8)
+    return new_image
+
+
 
 def image_to_bytes(image: typing.Union[numpy.ndarray, str, pathlib.Path, io.BytesIO]) -> bytes:
     """ Returns the bytes of the image """
@@ -97,13 +108,14 @@ def image_to_bytes(image: typing.Union[numpy.ndarray, str, pathlib.Path, io.Byte
     else:
         raise TypeError(f"The type ${image.__class__.__name__} is not support for reading")
 
+
 class ImageUtilsMixIn(abc.ABC):
     """ Mixin with utility methods for working with images """
     _color_palette: typing.Dict[int, typing.Tuple[int, int, int]]
     _classes: typing.Dict[int, str]
 
     def __init__(self,
-                *args,
+                 *args,
                  color_palette: typing.Optional[typing.Dict[int, typing.Tuple[int, int, int]]] = None,
                  classes: typing.Optional[typing.Dict[int, str]] = None,
                  metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
@@ -130,10 +142,11 @@ class ImageUtilsMixIn(abc.ABC):
         """ Returns id, color key-value pairs of the classes for the model """
         if self._color_palette:
             if len(self._color_palette) != len(self.classes):
-                raise ValueError("Color palette wrong shape: The number of colors in the color palette does not match the number of classes")
+                raise ValueError(
+                    "Color palette wrong shape: The number of colors in the color palette does not match the number of classes")
             return self._color_palette
         else:
-            raise RuntimeError("Color palette not defined")  #pylint: disable
+            raise RuntimeError("Color palette not defined")  # pylint: disable
 
     def draw_detections(self, img, box, score, class_id):
         """
@@ -187,7 +200,6 @@ class ImageUtilsMixIn(abc.ABC):
     def extract_image_to_array(self, image: typing.Union[str, pathlib.Path, io.BytesIO, bytes]) -> numpy.ndarray:
         """ Loads a image to an numpy.ndarray from a reference """
         return extract_image(image)
-    
 
 
 class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
@@ -239,7 +251,6 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 
-
     @property
     def input_name(self) -> str:
         """ Name of the input tensor """
@@ -254,7 +265,7 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
     def image_height(self) -> int:
         """ Height of the input image for the model """
         return self.onnx_session.get_inputs()[0].shape[2]
-    
+
     @property
     def image_width(self) -> int:
         """ Width of the input image for the model """
@@ -262,7 +273,7 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
 
     @property
     def classes(self) -> typing.Dict[int, str]:
-        """ Map of class_id to class_name """        
+        """ Map of class_id to class_name """
         if self._classes:
             return self._classes
         return ast.literal_eval(self.onnx_session._model_meta.custom_metadata_map['names'])
@@ -290,7 +301,7 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
         # Transpose the image to have the channel dimension as the first dimension
         image_data = numpy.transpose(image_data, (2, 0, 1))  # Channel first
 
-            # Expand the dimensions of the image data to match the expected input shape
+        # Expand the dimensions of the image data to match the expected input shape
         image_data = numpy.expand_dims(image_data, axis=0).astype(numpy.float32)
 
         # Return the preprocessed image data
@@ -388,7 +399,7 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
 #                  iou_threshold: float = 0.5,
 #                  metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
 #                  **kwargs) -> None:
-#         super().__init__(*args, 
+#         super().__init__(*args,
 #             model_platform=model_platform,
 #             model_path=model_path,
 #             confidence_threshold=confidence_threshold,
@@ -419,7 +430,7 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
 #         except Exception as e:  # pylint: disable=broad-exception-caught
 #             logger.exception(e)
 #         return self
-    
+
 #     def __exit__(self, exc_type, exc_value, traceback) -> None:
 #         try:
 #             self.session_manager.close_session()

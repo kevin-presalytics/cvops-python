@@ -69,7 +69,6 @@ class DeploymentManager(object):
             cvops.schemas.DeploymentStatusTypes.ACTIVE: self.handle_deployment_active
         }
 
-
     @property
     def workspace_deployments_topic(self) -> str:
         """ Returns the topic for the workspace deployment """
@@ -85,9 +84,10 @@ class DeploymentManager(object):
     # def handle_workspace_deployment_event(self, *args) -> None:
     #     """ Handles that workspace deployment event"""
     #     try:
-            
-    #         event: cvops.events.AnyEvent = cvops.events.BaseEvent.factory(*args, manager=self.device_manager)  # type: ignore
-            
+
+    # event: cvops.events.AnyEvent = cvops.events.BaseEvent.factory(*args,
+    # manager=self.device_manager)  # type: ignore
+
     #         if isinstance(event, cvops.events.DeploymentCreatedEvent):
     #             self.handle_deployment_created(event)
     #         elif isinstance(event, cvops.events.DeploymentUpdatedEvent):
@@ -127,7 +127,7 @@ class DeploymentManager(object):
                 # def workspace_event_handler(*args):
                 #     self.device_manager.handle_platform_event(*args)
                 self.device_manager.subscribe(
-                    self.device_manager.workspace_events_topic, 
+                    self.device_manager.workspace_events_topic,
                     self.device_manager.handle_platform_event  # type: ignore
                 )
                 # Validate and Normalize arguments
@@ -149,7 +149,8 @@ class DeploymentManager(object):
                     model_metadata.update(kwargs)
                 else:
                     if not bucket_name and not object_name:
-                        raise ValueError("If no local file path is provided, a bucket_name and object name must be set.")
+                        raise ValueError(
+                            "If no local file path is provided, a bucket_name and object name must be set.")
 
                 # Create Deployment Created Payload
                 created_payload = cvops.schemas.DeploymentCreatedPayload(
@@ -183,6 +184,7 @@ class DeploymentManager(object):
                 ]
                 if not self.wait_for_completion or self.device_manager.device_id not in device_ids:
                     close_statuses.append(cvops.schemas.DeploymentStatusTypes.MODEL_DEPLOYING)
+
                 def listen_for_close_status(event: cvops.events.DeploymentUpdatedEvent):
                     deployment = event.deserialize_event_data()
                     if deployment.status in close_statuses:
@@ -190,9 +192,8 @@ class DeploymentManager(object):
                 self.device_manager.set_event_callback(
                     cvops.events.EventTypes.DEPLOYMENT_UPDATED,
                     listen_for_close_status
-                )                
+                )
                 close_signal.wait_for_callback()
-
 
         except AssertionError as a_err:
             logger.error(a_err.args[0])
@@ -233,7 +234,7 @@ class DeploymentManager(object):
             def url_received_callback(*args) -> None:
                 """ Command callback for an upload url received. """
                 self.url_received_callback(*args)
-            
+
             self.device_manager.subscribe(
                 self.device_manager.device_command_topic,
                 url_received_callback
@@ -249,7 +250,7 @@ class DeploymentManager(object):
             )
             message_content = cvops.schemas.StorageMessage(
                 response_topic=self.device_manager.device_command_topic,
-                payload=payload    
+                payload=payload
             )
             message = cvops.mqtt.MqttMessage(
                 topic=self.device_manager.workspace_storage_topic,
@@ -310,7 +311,7 @@ class DeploymentManager(object):
                 if failed:
                     self.session.deployment.status = cvops.schemas.DeploymentStatusTypes.FAILED
                 if self.device_manager.workspace and active:
-                        self.update_deployment(self.session.deployment)
+                    self.update_deployment(self.session.deployment)
         if self.close_signal:
             self.close_signal.complete_callback()
 

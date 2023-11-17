@@ -67,7 +67,7 @@ class CLI(object):
         DEPLOY = """
             Deploy a model to devices in your CVOps workspace
         """
-    
+
     class DeploySubCommands:
         LOCAL = "local"
         YOLOV8 = "yolov8"
@@ -89,13 +89,13 @@ class CLI(object):
         self.listen_parser = self.subparsers.add_parser('listen', help=self.Descriptions.LISTEN)
         self.version_parser = self.subparsers.add_parser('version', help=self.Descriptions.VERSION)
         self.workspace_parser = self.subparsers.add_parser('workspace', help=self.Descriptions.WORKSPACE)
-        self.deploy_parser = self.subparsers.add_parser('deploy', 
-            help=self.Descriptions.DEPLOY,
-            description=self.DeployDescriptions.DEPLOY
-        )
+        self.deploy_parser = self.subparsers.add_parser('deploy',
+                                                        help=self.Descriptions.DEPLOY,
+                                                        description=self.DeployDescriptions.DEPLOY
+                                                        )
         self.run_inference_parser = self.subparsers.add_parser('run-inference', help=self.Descriptions.RUN_INFERENCE)
         self.run_inference_parser.add_argument(
-            "-m", "--model-path", 
+            "-m", "--model-path",
             help="Path to the model file to test",
         )
         self.run_inference_parser.add_argument(
@@ -111,7 +111,6 @@ class CLI(object):
             help="Path to a json file containing model metadata",
         )
 
-
         self.deploy_subparsers = self.deploy_parser.add_subparsers(
             title="Deployment Commands",
             description="The following deployment commands are available:",
@@ -124,27 +123,27 @@ class CLI(object):
             self.DeploySubCommands.LOCAL,
             help="Deploy a local model file to devices in your workspace",
         )
-        
+
         self.local_deploy_parser.add_argument(
-            "filepath", 
+            "filepath",
             help=self.DeployDescriptions.FILEPATH,
         )
 
         self.local_deploy_parser.add_argument(
-            "-m", "--model-framework", 
+            "-m", "--model-framework",
             help=self.DeployDescriptions.MODEL_FRAMEWORK,
             default="onnx",
             required=False
         )
-        
+
         self.local_deploy_parser.add_argument(
-            "-t", "--type", 
+            "-t", "--type",
             help=self.DeployDescriptions.TYPE,
             required=True
         )
 
         self.local_deploy_parser.add_argument(
-            "-d", "--device-ids", 
+            "-d", "--device-ids",
             help=self.DeployDescriptions.DEVICE_IDS,
             default=None,
             required=False
@@ -157,14 +156,14 @@ class CLI(object):
         )
 
         self.yolo_deploy_parser.add_argument(
-            "-d", "--device-ids", 
+            "-d", "--device-ids",
             help=self.DeployDescriptions.DEVICE_IDS,
             default=None,
             required=False
         )
 
         self.yolo_deploy_parser.add_argument(
-            "-f", "--filepath", 
+            "-f", "--filepath",
             help=self.DeployDescriptions.FILEPATH + "  If not provided, downloads a pretrained model from ultralytics",
             default=None,
             required=False
@@ -242,7 +241,7 @@ class CLI(object):
             self.deploy_parser.print_help()
             sys.exit(1)
 
-    def local_deploy_handler(self, args: argparse.Namespace) -> None:  # pylint: disable=unused-argument 
+    def local_deploy_handler(self, args: argparse.Namespace) -> None:  # pylint: disable=unused-argument
         """Handles the local deploy subcommand"""
         logger.info("Local deploy")
         cvops.workflows.deploy_onnx_model(

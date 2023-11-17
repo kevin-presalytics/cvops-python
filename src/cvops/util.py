@@ -75,5 +75,6 @@ def export_to_onnx(
         else:
             raise NotImplementedError("Only YOLOv8 is currently supported for export")
     except ImportError:
-        logger.error("Unable to import required dependencies for model export.  Please install ultralytics and torch to export YOLOv8 models")
+        logger.error(
+            "Unable to import required dependencies for model export.  Please install ultralytics and torch to export YOLOv8 models")
         raise

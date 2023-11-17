@@ -156,7 +156,7 @@ class DeviceManager(cvops.events.EventManager):
         except Exception as ex:
             logger.exception("Error getting workspace: %s", ex)
             raise ex
-        
+
     def _get_workspace(self) -> None:
         """ Logic for getting the workspace """
         self.get_device_info()
