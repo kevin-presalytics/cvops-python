@@ -124,8 +124,7 @@ def run_inference_on_directory(
     metadata_path: typing.Optional[typing.Union[str, pathlib.Path]] = None,
     color_palette: typing.Optional[typing.List[typing.Tuple[int, int, int]]] = None,
     confidence_threshold: float = 0.5,
-    iou_threshold: float = 0.4,
-    use_error_correction: bool = True
+    iou_threshold: float = 0.4
 ) -> typing.List[cvops.schemas.InferenceResult]:
     """ Runs inference on all images in a directory and saves the results to an output directory
 
@@ -215,10 +214,8 @@ def run_inference_on_directory(
                             if isinstance(output_directory, pathlib.Path) \
                             else pathlib.Path(output_directory.name).joinpath(file.name)
                         image = cvops.image_processor.extract_image(file)
-                        if use_error_correction:
-                            inference_result_ptr = inference_manager.multi_run_inference(image)
-                        else:
-                            inference_result_ptr = inference_manager.run_inference(image)
+                            
+                        inference_result_ptr = inference_manager.run_inference(image)
                         inference_results_dto = cvops.inference.factories.inference_result_from_c_type(
                             inference_result_ptr)
                         results.append(inference_results_dto)
