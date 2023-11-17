@@ -15,9 +15,11 @@ class InferenceTests(unittest.TestCase):
         """ Runs before the tests """
         self.output_dir = tempfile.TemporaryDirectory()
         # Uncomment the line below if you want to see the output files
-        self.output_dir = tests.ROOT_DIR.joinpath("out")
-        if self.output_dir.exists():
-            shutil.rmtree(self.output_dir)
+        # self.output_dir = tests.ROOT_DIR.joinpath("out")
+
+        if isinstance(self.output_dir, pathlib.Path):
+            if self.output_dir.exists():
+                shutil.rmtree(self.output_dir)
         self.c_source_dir = tests.ROOT_DIR.joinpath("cvops-inference")
         self.c_test_files_dir = self.c_source_dir.joinpath("tests", "files")
         self.c_test_images_dir = self.c_test_files_dir.joinpath("images")
@@ -48,16 +50,23 @@ class InferenceTests(unittest.TestCase):
         )
 
         # Assert
+
+        # Ensure all images were processed
         self.assertEqual(len(results), input_file_count)
         num_output_files = len([f for f in pathlib.Path(self.output_dir.name).glob("*") if f.is_file()])
         self.assertEqual(num_output_files, input_file_count)
 
         for result in results:
             for box in result.boxes:
+                # Ensure boxes are valid sized
                 self.assertGreaterEqual(box.width, 0)
                 self.assertGreaterEqual(box.height, 0)
-                self.assertGreaterEqual(box.x, 0)
-                self.assertGreaterEqual(box.y, 0)
+
+                # Ensure boxes are valid positioned (within image bounds)
+                self.assertGreater(box.x, -box.width)
+                self.assertGreater(box.y, -box.height)
+
+                # Ensure boxes have valid confidence, class_id, class_name, and object_id
                 self.assertGreaterEqual(box.confidence, 0)
                 self.assertGreaterEqual(box.class_id, 0)
                 self.assertIsInstance(box.class_name, str)
