@@ -10,14 +10,14 @@ import cvops.config
 
 logger = logging.getLogger(__name__)
 
-# Singleton instance of the loaded C library
-__instance__: ctypes.CDLL = None
+# One instance of the C library dll per process
+__instance__: typing.Optional[ctypes.CDLL] = None
 
 
-def get_dll_instance():
+def get_dll_instance() -> typing.Optional[ctypes.CDLL]:
     """ Returns the C Library dll singleton """
+    global __instance__  # pylint: disable=global-statement
     return __instance__
-
 
 class DllLoader(object):
     """ Loads the C library """
@@ -30,11 +30,12 @@ class DllLoader(object):
     system: str
     processor: str
     debug: bool
+    pid: int
 
     def __init__(self, debug: typing.Optional[bool] = None):
         if debug is None:
             self.debug = cvops.config.SETTINGS.debug
-
+        self.pid = os.getpid()
         self.system = platform.system()
         self.processor = platform.processor()
         self.project_root = pathlib.Path(__file__).parent.parent.parent.parent

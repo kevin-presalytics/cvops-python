@@ -76,7 +76,7 @@ def dispose_inference_result(result: c_inference_result_p) -> None:
     dll.dispose_inference_result(result)
 
 
-c_inference_result_p.__del__ = dispose_inference_result
+# c_inference_result_p.__del__ = dispose_inference_result
 
 
 class IInferenceManager(ctypes.Structure):

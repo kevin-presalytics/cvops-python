@@ -46,6 +46,38 @@ def inference_result_from_c_type(c_inference_result: _types.InferenceResult) -> 
     )
 
 
+def inference_result_to_c_type(inference_result: cvops.schemas.InferenceResult) -> _types.InferenceResult:
+    """ Converts a cvops.schemas.InferenceResult to a C type for rendering"""
+    boxes_list = []
+    for box in inference_result.boxes:
+        c_box = _types.Box(
+            height=ctypes.c_int(box.height),
+            width=ctypes.c_int(box.width),
+            x=ctypes.c_int(box.x),
+            y=ctypes.c_int(box.y),
+            class_id=ctypes.c_int(box.class_id),
+            class_name=ctypes.c_char_p(box.class_name.encode('utf-8')),
+            object_id=ctypes.c_int(box.object_id),
+            confidence=ctypes.c_float(box.confidence)
+        )
+        boxes_list.append(c_box)
+    c_inference_result = _types.InferenceResult(
+        boxes=(_types.Box * len(inference_result.boxes))(*boxes_list),
+        boxes_count=ctypes.c_int(len(inference_result.boxes)),
+        milliseconds=ctypes.c_float(inference_result.milliseconds),
+        image=None,
+        image_size=ctypes.c_int(0),
+        image_width=ctypes.c_int(0),
+        image_height=ctypes.c_int(0),
+    )
+    return c_inference_result
+
+def inference_result_to_c_type_ptr(inference_result: cvops.schemas.InferenceResult) -> _types.c_inference_result_p:
+    """ Converts a cvops.schemas.InferenceResult to a C type for rendering"""
+    c_inference_result = inference_result_to_c_type(inference_result)
+    return ctypes.pointer(c_inference_result)
+
+
 def get_c_model_platform(model_platform: cvops.schemas.ModelPlatforms) -> ctypes.c_int:
     """ Returns the C representation of the model Framework """
     model_platform = _types.MODEL_PLATFORM_C_MAP.get(model_platform, None)

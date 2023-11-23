@@ -22,8 +22,11 @@ class InferenceSessionManager(cvops.inference.c_api.CApi):
     session_request: _types.InferenceSessionRequest
     _is_in_context_manager: bool
 
-    def __init__(self, session_request: _types.InferenceSessionRequest) -> None:
-        super().__init__()
+    def __init__(self, 
+                 session_request: _types.InferenceSessionRequest,
+                 **kwargs
+                 ) -> None:
+        super().__init__(**kwargs)
         self.session = None
         assert isinstance(session_request, _types.InferenceSessionRequest), \
             "session_request must be an cvops.inference.c_interfaces.InferenceSessionRequest"
@@ -55,10 +58,21 @@ class InferenceSessionManager(cvops.inference.c_api.CApi):
     def _run_inference(self,
                        request: _types.InferenceRequest
                        ) -> _types.InferenceResult:
-        result_ptr = self.dll.run_inference(self.session, request)
-        assert isinstance(result_ptr, _types.c_inference_result_p), \
-            "Invalid Inference return type from C Library"
-        return result_ptr
+        """ Runs inference on the given image """
+        try:
+            result_ptr = self.dll.run_inference(self.session, request)
+            assert isinstance(result_ptr, _types.c_inference_result_p), \
+                "Invalid Inference return type from C Library"
+            if not result_ptr:
+                raise RuntimeError("Inference returned NULL Pointer")
+            return result_ptr
+        except Exception as ex:  # pylint: disable=broad-except
+            msg = self.get_error()
+            if msg:
+                logger.error(msg)
+                raise RuntimeError(msg) from ex
+            else:
+                raise ex
 
     def run_inference(self,
                       image: typing.Union[numpy.ndarray, bytes],
@@ -114,6 +128,10 @@ class InferenceSessionManager(cvops.inference.c_api.CApi):
             return c_error.decode('utf-8')
         return c_error
 
+    def dispose_inference_result(self, result: _types.c_inference_result_p) -> None:
+        """ Disposes the inference result """
+        self.dll.dispose_inference_result(result)
+
 
 class InferenceResultRenderer(cvops.inference.c_api.CApi):
     """ Renders InferenceResults onto Images """
@@ -124,8 +142,9 @@ class InferenceResultRenderer(cvops.inference.c_api.CApi):
     def __init__(self,
                  classes: typing.Dict[int, str],
                  color_palette: typing.Optional[typing.List[typing.Tuple[int, int, int]]] = None,
+                 **kwargs
                  ) -> None:
-        super().__init__()
+        super().__init__(**kwargs)
         self._is_in_context_manager = False
         if not isinstance(classes, dict):
             raise TypeError("Classes must be a dictionary")
@@ -170,14 +189,26 @@ class InferenceResultRenderer(cvops.inference.c_api.CApi):
 
     def render(self, inference_result_ptr: _types.c_inference_result_p, image: numpy.ndarray) -> None:
         """ Renders the given inference result onto an image """
-        if not self._is_in_context_manager:
-            raise RuntimeError("Must use InferenceResultRenderer in a context manager")
-        # Channels per https://stackoverflow.com/a/53758304/16580040
-        num_channels = image.shape[-1] if image.ndim == 3 else 1
-        self.dll.render_inference_result(
-            inference_result_ptr,
-            image.ctypes._data,  # pylint: disable=protected-access
-            image.shape[0],
-            image.shape[1],
-            num_channels
-        )
+        if image is None:
+            return
+        try:
+            if not self._is_in_context_manager:
+                raise RuntimeError("Must use InferenceResultRenderer in a context manager")
+            if isinstance(inference_result_ptr, ctypes.c_void_p):
+                inference_result_ptr = ctypes.cast(inference_result_ptr, _types.c_inference_result_p)
+            if isinstance(inference_result_ptr, _types.InferenceResult):
+                inference_result_ptr = ctypes.pointer(inference_result_ptr)
+            assert isinstance(inference_result_ptr, _types.c_inference_result_p), \
+                "Invalid Inference return type from C Library"
+            assert isinstance(image, numpy.ndarray), "Image must be a numpy array"
+            # Channels per https://stackoverflow.com/a/53758304/16580040
+            num_channels = image.shape[-1] if image.ndim == 3 else 1
+            self.dll.render_inference_result(
+                inference_result_ptr,
+                image.ctypes._data,  # pylint: disable=protected-access
+                image.shape[0],
+                image.shape[1],
+                num_channels
+            )
+        except AssertionError as ex:
+            raise TypeError("Invalid inference rending args") from ex
