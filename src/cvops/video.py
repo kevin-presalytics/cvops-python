@@ -29,7 +29,7 @@ class VideoPlayerBase(abc.ABC):
     fps: float
     limit_fps: bool
 
-    def __init__(self, 
+    def __init__(self,
                  video_source: typing.Union[str, pathlib.Path],
                  show_video: bool = True,
                  limit_fps: bool = True,
@@ -45,15 +45,14 @@ class VideoPlayerBase(abc.ABC):
 
         # Get openCV version
         (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
- 
+
         # With webcam get(CV_CAP_PROP_FPS) does not work.
         # Let's see for ourselves.
-    
-        if int(major_ver)  < 3 :
+
+        if int(major_ver) < 3:
             self.fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)
         else:
             self.fps = self.cap.get(cv2.CAP_PROP_FPS)
-    
 
     @property
     def image_stream(self) -> typing.Generator[numpy.ndarray, None, None]:
@@ -70,7 +69,7 @@ class VideoPlayerBase(abc.ABC):
             except KeyboardInterrupt:
                 self.stop()
                 break
-    
+
     def play(self) -> None:
         """ Plays the video continuously at the video fps"""
         prev = time.time()
@@ -99,7 +98,6 @@ class VideoPlayerBase(abc.ABC):
         self.show_video = False
         self.cap.release()
 
-
     @abc.abstractmethod
     def process_frame(self, frame: numpy.ndarray) -> numpy.ndarray:
         """ Processes a frame of video and returns the processed frame """
@@ -108,8 +106,9 @@ class VideoPlayerBase(abc.ABC):
     def __del__(self) -> None:
         try:
             self.stop()
-        except:  # pylint: disable=bare-except
+        except BaseException:  # pylint: disable=bare-except
             pass
+
 
 class InferenceThread(threading.Thread):
     """ Moves inference into a subprocess to let Video Player classes avoid binding """
@@ -144,7 +143,8 @@ class InferenceThread(threading.Thread):
         self.name = "python-cvops-inference"
         self.is_listening = True
         self.debug = debug
-        assert isinstance(model_platform, cvops.schemas.ModelPlatforms), "`model_platform` must be a ModelPlatforms enum"
+        assert isinstance(
+            model_platform, cvops.schemas.ModelPlatforms), "`model_platform` must be a ModelPlatforms enum"
         self.model_platform = model_platform
         assert isinstance(confidence_threshold, float), "`confidence_threshold` must be a float"
         self.confidence_threshold = confidence_threshold
@@ -224,14 +224,16 @@ class InferenceProcess(multiprocessing.Process):
         assert model_path.exists(), "Supplied `model_path` does not exist"
         assert model_path.suffix == ".onnx", "Model must be onnx format"
         self.model_path = model_path
-        assert isinstance(request_queue, multiprocessing.queues.Queue), "`request_queue` must be a multiprocessing.Queue"
+        assert isinstance(
+            request_queue, multiprocessing.queues.Queue), "`request_queue` must be a multiprocessing.Queue"
         self.request_queue = request_queue
         assert isinstance(result_queue, multiprocessing.queues.Queue), "`result_queue` must be a multiprocessing.Queue"
         self.result_queue = result_queue
         self.name = "python-cvops-inference"
         self.is_listening = True
         self.debug = debug
-        assert isinstance(model_platform, cvops.schemas.ModelPlatforms), "`model_platform` must be a ModelPlatforms enum"
+        assert isinstance(
+            model_platform, cvops.schemas.ModelPlatforms), "`model_platform` must be a ModelPlatforms enum"
         self.model_platform = model_platform
         assert isinstance(confidence_threshold, float), "`confidence_threshold` must be a float"
         self.confidence_threshold = confidence_threshold
@@ -284,8 +286,8 @@ class InferenceProcess(multiprocessing.Process):
 
 
 class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, VideoPlayerBase):
-    """ Video Player that uses a local model for inference 
-        This class is 
+    """ Video Player that uses a local model for inference
+        This class is
     """
     model_path: pathlib.Path
     inference_request_queue: "queue.Queue[numpy.ndarray]"
@@ -359,7 +361,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
             if self.last_result is None and not self._queue_initialized:
                 self.inference_request_queue.put_nowait(frame)
                 self._queue_initialized = True
-            
+
             # Check for new results
             inference_result = None
             # Get the latest result

@@ -72,6 +72,7 @@ def inference_result_to_c_type(inference_result: cvops.schemas.InferenceResult) 
     )
     return c_inference_result
 
+
 def inference_result_to_c_type_ptr(inference_result: cvops.schemas.InferenceResult) -> _types.c_inference_result_p:
     """ Converts a cvops.schemas.InferenceResult to a C type for rendering"""
     c_inference_result = inference_result_to_c_type(inference_result)

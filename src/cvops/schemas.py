@@ -9,7 +9,6 @@ import pydantic.alias_generators
 import cvops.config
 
 
-
 def now():
     """ Returns the current time in UTC"""
     return datetime.datetime.now(datetime.timezone.utc)
@@ -278,4 +277,3 @@ class InferenceResult(TimeSeriesEntity):
     meshes: typing.Optional[typing.Sequence] = []
     labels: typing.Optional[typing.Sequence] = []
     milliseconds: float = 0.0
-

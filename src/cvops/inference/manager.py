@@ -22,7 +22,7 @@ class InferenceSessionManager(cvops.inference.c_api.CApi):
     session_request: _types.InferenceSessionRequest
     _is_in_context_manager: bool
 
-    def __init__(self, 
+    def __init__(self,
                  session_request: _types.InferenceSessionRequest,
                  **kwargs
                  ) -> None:

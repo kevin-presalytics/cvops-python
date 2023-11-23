@@ -19,6 +19,7 @@ def get_dll_instance() -> typing.Optional[ctypes.CDLL]:
     global __instance__  # pylint: disable=global-statement
     return __instance__
 
+
 class DllLoader(object):
     """ Loads the C library """
 
