@@ -16,7 +16,6 @@ __instance__: typing.Optional[ctypes.CDLL] = None
 
 def get_dll_instance() -> typing.Optional[ctypes.CDLL]:
     """ Returns the C Library dll singleton """
-    global __instance__  # pylint: disable=global-statement
     return __instance__
 
 

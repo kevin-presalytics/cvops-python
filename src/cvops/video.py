@@ -14,6 +14,7 @@ import numpy
 import cvops
 import cvops.config
 import cvops.schemas
+import cvops.image_processor
 import cvops.inference.manager
 import cvops.inference.factories
 
@@ -209,7 +210,7 @@ class InferenceProcess(multiprocessing.Process):
 
     def __init__(self,
                  model_path: pathlib.Path,
-                 request_queue: "multiprocessing.queues.Queue[numpy.ndarray]",
+                 request_queue: "multiprocessing.queues.Queue[bytes]",
                  result_queue: "multiprocessing.queues.Queue[cvops.schemas.InferenceResult]",
                  model_platform: cvops.schemas.ModelPlatforms,
                  metadata: typing.Dict[str, typing.Any],
@@ -259,9 +260,10 @@ class InferenceProcess(multiprocessing.Process):
                     self.result_queue.put(True)
                 while self.is_listening:
                     try:
-                        image = self.request_queue.get()
+                        image_bytes = self.request_queue.get()
                         logger.debug("Received image from queue")
-                        assert isinstance(image, numpy.ndarray), "`image` must be a numpy.ndarray"
+                        assert isinstance(image_bytes, bytes), "`image_bytes` must be returned from queue"
+                        image = cvops.image_processor.extract_image(image_bytes)
                         c_inference_result = mgr.run_inference(
                             image,
                             "",
@@ -290,8 +292,8 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
         This class is
     """
     model_path: pathlib.Path
-    inference_request_queue: "queue.Queue[numpy.ndarray]"
-    inference_result_queue: "queue.Queue[cvops.schemas.InferenceResult]"
+    inference_request_queue: "multiprocessing.queues.Queue[numpy.ndarray]"
+    inference_result_queue: "multiprocessing.queues.Queue[cvops.schemas.InferenceResult]"
     inference_process: InferenceProcess
     last_result: typing.Optional[cvops.inference.c_interfaces.InferenceResult]
     _queue_initialized: bool
@@ -313,9 +315,9 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
             model_path = pathlib.Path(model_path)
         assert model_path.exists(), "Supplied model path does not exist"
         self.model_path = model_path
-        self.inference_request_queue = queue.Queue()
-        self.inference_result_queue = queue.Queue()
-        self.inference_process = InferenceThread(
+        self.inference_request_queue = multiprocessing.Queue()
+        self.inference_result_queue = multiprocessing.Queue()
+        self.inference_process = InferenceProcess(
             model_path=self.model_path,
             model_platform=model_platform,
             request_queue=self.inference_request_queue,
@@ -343,12 +345,15 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         try:
-            self.inference_process.is_listening = False
-            self.inference_process.join()
-            # self.inference_process.terminate()
-            # while self.inference_process.is_alive():
-            #     time.sleep(0.1)
-            # self.inference_process.close()
+            # # For threading
+            # self.inference_process.is_listening = False
+            # self.inference_process.join()
+
+            # Same, but for multiprocessing
+            self.inference_process.terminate()
+            while self.inference_process.is_alive():
+                time.sleep(0.1)
+            self.inference_process.close()
         except Exception as ex:  # pylint: disable=broad-exception-caught
             logger.exception(ex, "Unable to end inference process")
         finally:
@@ -359,7 +364,8 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
         try:
             # Send the first frame to the inference process
             if self.last_result is None and not self._queue_initialized:
-                self.inference_request_queue.put_nowait(frame)
+                image_bytes = cvops.image_processor.image_to_bytes(frame)
+                self.inference_request_queue.put_nowait(image_bytes)
                 self._queue_initialized = True
 
             # Check for new results
@@ -373,7 +379,10 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
                 logger.debug("Received inference result")
                 self.last_result = cvops.inference.factories.inference_result_to_c_type_ptr(inference_result)
                 # Result queue is cleared, send the current frame to the inference process
-                self.inference_request_queue.put_nowait(frame)
+                # With multiprocessing, we need to send a fully serialized type, since the
+                # memory is not shared between processes and ctypes pointers will be orphaned
+                image_bytes = cvops.image_processor.image_to_bytes(frame)
+                self.inference_request_queue.put_nowait(image_bytes)
             # Render results to frame if available
             if self.last_result:
                 self.render(self.last_result, frame)
