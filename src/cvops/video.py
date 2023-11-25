@@ -259,15 +259,16 @@ class InferenceProcess(multiprocessing.Process):
                     self.result_queue.put(True)
                 while self.is_listening:
                     try:
-                        image = self.request_queue.get()
+                        image_bytes = self.request_queue.get()
                         # logger.debug("Received image from queue")
+                        image = cvops.image_processor.extract_image(image_bytes)
                         assert isinstance(image, numpy.ndarray), "`image` must be a numpy.ndarray"
                         c_inference_result = mgr.run_inference(
                             image,
                             "",
                             draw_detections=False
                         )
-                        
+
                         if not c_inference_result:
                             raise RuntimeError("Inference returned NULL Pointer")
                         # Note: c-inference result is a pointer to a struct (that itself contains pointers), not the struct itself
@@ -297,6 +298,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
     _queue_initialized: bool
     debug: bool
     last_request_time: int
+    num_inference_processes: int
 
     def __init__(self,
                  model_path: typing.Union[str, pathlib.Path],
@@ -304,6 +306,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
                  metadata: typing.Dict[str, typing.Any],
                  confidence_threshold: float = 0.5,
                  iou_threshold: float = 0.4,
+                 num_inference_processes: int = 1,
                  debug: bool = False,
                  **kwargs
                  ) -> None:
@@ -316,6 +319,8 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
         self.model_path = model_path
         self.inference_request_queue = multiprocessing.Queue()
         self.inference_result_queue = multiprocessing.Queue()
+        assert isinstance(num_inference_processes, int), "`num_inference_processes` must be an int"
+        self.num_inference_processes = num_inference_processes
         self.inference_process = InferenceProcess(
             model_path=self.model_path,
             model_platform=model_platform,
@@ -390,9 +395,11 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
                 if milliseconds_since_last_request > self.last_result.contents.milliseconds:
                     # Clear the queue prior to inserting the new frame
                     while not self.inference_request_queue.empty():
-                        # logger.debug("Removed request queue item")  # This should only happen is something funny happens on the inference thread.
+                        # logger.debug("Removed request queue item")  # This should only happen is
+                        # something funny happens on the inference thread.
                         self.inference_request_queue.get_nowait()
-                    self.inference_request_queue.put_nowait(frame)
+                    image_bytes = cvops.image_processor.image_to_bytes(frame)
+                    self.inference_request_queue.put_nowait(image_bytes)
                     self.last_request_time = int(time.time() * 1000)
         except queue.Full:
             pass

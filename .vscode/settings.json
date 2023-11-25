@@ -50,6 +50,7 @@
     ],
     "cmake.sourceDirectory": "/home/kevin/projects/cvez/cvops-python/cvops-inference",
     "cmake.autoSelectActiveFolder": false,
+    "cmake.cmakePath": "/snap/bin/cmake",
     "files.associations": {
         "stdexcept": "cpp",
         "iostream": "cpp",

@@ -11,12 +11,15 @@ import cvops.config
 logger = logging.getLogger(__name__)
 
 # One instance of the C library dll per process
-__instance__: typing.Optional[ctypes.CDLL] = None
+__instances__: typing.Optional[typing.Dict[int, ctypes.CDLL]] = {}
 
 
 def get_dll_instance() -> typing.Optional[ctypes.CDLL]:
     """ Returns the C Library dll singleton """
-    return __instance__
+    pid = os.getpid()
+    if pid not in __instances__:
+        return None
+    return __instances__[pid]
 
 
 class DllLoader(object):
@@ -31,21 +34,25 @@ class DllLoader(object):
     processor: str
     debug: bool
     pid: int
+    dll_file_name: str
 
-    def __init__(self, debug: typing.Optional[bool] = None, dll_file_name: typing.Optional[str] = None, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(
+            self,
+            debug: typing.Optional[bool] = None,
+            dll_file_name: typing.Optional[str] = None,
+            **kwargs) -> None:
         if debug is None:
             self.debug = cvops.config.SETTINGS.debug
         self.pid = os.getpid()
         self.system = platform.system()
         self.processor = platform.processor()
         self.project_root = pathlib.Path(__file__).parent.parent.parent.parent
+        self.dll_file_name = dll_file_name or self.DEFAULT_DLL_FILE_NAME
         if self.debug:
             self.library_path = self.project_root.joinpath("cvops-inference", "build")
         else:
             self.library_path = pathlib.Path(__file__).parent.joinpath("lib")
         self.dll_path = self.get_dll_path()
-        self.dll_file_name = dll_file_name or self.DEFAULT_DLL_FILE_NAME
 
     @property
     def dll(self):
@@ -55,8 +62,8 @@ class DllLoader(object):
     @dll.setter
     def dll(self, value):
         """ Sets the dll object """
-        global __instance__  # pylint: disable=global-statement
-        __instance__ = value
+        pid = os.getpid()
+        __instances__[pid] = value
 
     def load(self) -> bool:
         """ Loads the dll, return bool indicating if the dll was loaded.  False indicates the dll was already loaded """
@@ -109,6 +116,3 @@ class DllLoader(object):
             return dll_path
         else:
             raise Exception(f"Unsupported system: System: {self.system}, Processor: {self.processor}")
-
-
-
