@@ -16,6 +16,7 @@ def now():
 
 class CooperativeBaseClass(abc.ABC):
     """ Base class to facilitate cooperative inheritance """
+
     def __init__(self, **kwargs):
         super().__init__()
 

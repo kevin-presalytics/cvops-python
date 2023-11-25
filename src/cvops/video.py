@@ -321,7 +321,9 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
                 # Send the current frame to the inference process "Just in Time"
                 # Use the last inference time to estimate when to send the next frame
                 milliseconds_since_last_request = int(time.time() * 1000) - self.last_request_time
-                if milliseconds_since_last_request > (self.last_result.contents.milliseconds / self.num_inference_processes):
+                if milliseconds_since_last_request > (
+                        self.last_result.contents.milliseconds /
+                        self.num_inference_processes):
                     # Clear the queue prior to inserting the new frame
                     while not self.inference_request_queue.empty():
                         # logger.debug("Removed request queue item")  # This should only happen is
