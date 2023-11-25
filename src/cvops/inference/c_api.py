@@ -1,15 +1,16 @@
 """ Wraps the DLL and provides a pythonic interface to the C API """
 import ctypes
+import cvops.schemas
 import cvops.inference.c_interfaces as _types
 import cvops.inference.loader
 
 
-class CApi(object):
+class CApi(cvops.schemas.CooperativeBaseClass):
     """ Wrapper class around the calls to the C API """
     loader: 'cvops.inference.loader.DllLoader'
 
     def __init__(self, **kwargs) -> None:
-        super().__init__()
+        super().__init__(**kwargs)
         self.loader = cvops.inference.loader.DllLoader(**kwargs)
         self.loader.load()
         if not self.dll:

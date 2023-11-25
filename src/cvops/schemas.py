@@ -14,6 +14,12 @@ def now():
     return datetime.datetime.now(datetime.timezone.utc)
 
 
+class CooperativeBaseClass(abc.ABC):
+    """ Base class to facilitate cooperative inheritance """
+    def __init__(self, **kwargs):
+        super().__init__()
+
+
 class LowerCaseEnum(enum.Enum):
     """ Base Class for Enums with greedy parsing of strings into enums """
 

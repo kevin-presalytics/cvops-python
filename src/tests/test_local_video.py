@@ -37,6 +37,7 @@ class LocalVideoTests(unittest.TestCase):
             "iou_threshold": 0.3,
             "show_video": True,
             "debug": True,
+            "num_inference_processes": 3
         }
 
         with cvops.video.LocalModelVideoPlayer(**video_player_args) as video_player:
