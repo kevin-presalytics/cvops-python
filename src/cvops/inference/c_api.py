@@ -10,7 +10,7 @@ class CApi(object):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.loader = cvops.inference.loader.DllLoader()
+        self.loader = cvops.inference.loader.DllLoader(**kwargs)
         self.loader.load()
         if not self.dll:
             raise Exception("Dll unable to load")  # pylint: disable=broad-exception-raised

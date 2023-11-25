@@ -22,7 +22,7 @@ def get_dll_instance() -> typing.Optional[ctypes.CDLL]:
 class DllLoader(object):
     """ Loads the C library """
 
-    DLL_FILE_NAME = "libcvops"
+    DEFAULT_DLL_FILE_NAME = "libcvops"
 
     project_root: pathlib.Path
     library_path: pathlib.Path
@@ -32,7 +32,8 @@ class DllLoader(object):
     debug: bool
     pid: int
 
-    def __init__(self, debug: typing.Optional[bool] = None):
+    def __init__(self, debug: typing.Optional[bool] = None, dll_file_name: typing.Optional[str] = None, **kwargs) -> None:
+        super().__init__(**kwargs)
         if debug is None:
             self.debug = cvops.config.SETTINGS.debug
         self.pid = os.getpid()
@@ -44,6 +45,7 @@ class DllLoader(object):
         else:
             self.library_path = pathlib.Path(__file__).parent.joinpath("lib")
         self.dll_path = self.get_dll_path()
+        self.dll_file_name = dll_file_name or self.DEFAULT_DLL_FILE_NAME
 
     @property
     def dll(self):
@@ -101,9 +103,12 @@ class DllLoader(object):
 
     def get_dll_path(self):
         if self.check_compatbility():
-            dll_path = self.library_path.joinpath(self.DLL_FILE_NAME + self.get_file_extension())
+            dll_path = self.library_path.joinpath(self.dll_file_name + self.get_file_extension())
             if not dll_path.exists():
                 raise Exception(f"Unable to find dll: {dll_path}")
             return dll_path
         else:
             raise Exception(f"Unsupported system: System: {self.system}, Processor: {self.processor}")
+
+
+

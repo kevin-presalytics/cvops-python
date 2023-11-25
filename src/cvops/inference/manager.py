@@ -144,7 +144,7 @@ class InferenceResultRenderer(cvops.inference.c_api.CApi):
                  color_palette: typing.Optional[typing.List[typing.Tuple[int, int, int]]] = None,
                  **kwargs
                  ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(dll_file_name="cvopsrendering", **kwargs)
         self._is_in_context_manager = False
         if not isinstance(classes, dict):
             raise TypeError("Classes must be a dictionary")

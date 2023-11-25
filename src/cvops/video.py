@@ -172,14 +172,13 @@ class InferenceThread(threading.Thread):
                 while self.is_listening:
                     try:
                         image = self.request_queue.get()
-                        logger.debug("Received image from queue")
+                        # logger.debug("Received image from queue")
                         assert isinstance(image, numpy.ndarray), "`image` must be a numpy.ndarray"
                         c_inference_result = mgr.run_inference(
                             image,
                             "",
                             draw_detections=False
                         )
-                        logger.debug("Ran inference")
                         if not c_inference_result:
                             raise RuntimeError("Inference returned NULL Pointer")
                         # Note: c-inference result is a pointer to a struct (that itself contains pointers), not the struct itself
@@ -260,16 +259,15 @@ class InferenceProcess(multiprocessing.Process):
                     self.result_queue.put(True)
                 while self.is_listening:
                     try:
-                        image_bytes = self.request_queue.get()
-                        logger.debug("Received image from queue")
-                        assert isinstance(image_bytes, bytes), "`image_bytes` must be returned from queue"
-                        image = cvops.image_processor.extract_image(image_bytes)
+                        image = self.request_queue.get()
+                        # logger.debug("Received image from queue")
+                        assert isinstance(image, numpy.ndarray), "`image` must be a numpy.ndarray"
                         c_inference_result = mgr.run_inference(
                             image,
                             "",
                             draw_detections=False
                         )
-                        logger.debug("Ran inference")
+                        
                         if not c_inference_result:
                             raise RuntimeError("Inference returned NULL Pointer")
                         # Note: c-inference result is a pointer to a struct (that itself contains pointers), not the struct itself
@@ -298,6 +296,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
     last_result: typing.Optional[cvops.inference.c_interfaces.InferenceResult]
     _queue_initialized: bool
     debug: bool
+    last_request_time: int
 
     def __init__(self,
                  model_path: typing.Union[str, pathlib.Path],
@@ -330,6 +329,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
         self.last_result = None
         self._queue_initialized = False
         self.debug = debug
+        self.last_request_time = int(time.time() * 1000)
 
     def __enter__(self) -> "LocalModelVideoPlayer":
         try:
@@ -376,16 +376,24 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
                 inference_result = self.inference_result_queue.get_nowait()
             if inference_result is not None:
                 # Convert to a ctype for the render method
-                logger.debug("Received inference result")
+                # logger.debug("Received inference result")
                 self.last_result = cvops.inference.factories.inference_result_to_c_type_ptr(inference_result)
                 # Result queue is cleared, send the current frame to the inference process
-                # With multiprocessing, we need to send a fully serialized type, since the
-                # memory is not shared between processes and ctypes pointers will be orphaned
-                image_bytes = cvops.image_processor.image_to_bytes(frame)
-                self.inference_request_queue.put_nowait(image_bytes)
+                # self.inference_request_queue.put_nowait(frame)
             # Render results to frame if available
             if self.last_result:
                 self.render(self.last_result, frame)
+
+                # Send the current frame to the inference process "Just in Time"
+                # Use the last inference time to estimate when to send the next frame
+                milliseconds_since_last_request = int(time.time() * 1000) - self.last_request_time
+                if milliseconds_since_last_request > self.last_result.contents.milliseconds:
+                    # Clear the queue prior to inserting the new frame
+                    while not self.inference_request_queue.empty():
+                        # logger.debug("Removed request queue item")  # This should only happen is something funny happens on the inference thread.
+                        self.inference_request_queue.get_nowait()
+                    self.inference_request_queue.put_nowait(frame)
+                    self.last_request_time = int(time.time() * 1000)
         except queue.Full:
             pass
         except queue.Empty:
