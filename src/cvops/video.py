@@ -181,12 +181,9 @@ class InferenceProcess(multiprocessing.Process):
                         # logger.debug("Received image from queue")
                         image = cvops.image_processor.extract_image(image_bytes)
                         assert isinstance(image, numpy.ndarray), "`image` must be a numpy.ndarray"
-                        c_inference_result = mgr.run_inference(
-                            image,
-                            "",
-                            draw_detections=False
-                        )
-
+                        # logger.debug("Running inference on image.  Image size: %s", len(image_bytes))
+                        c_inference_result = mgr.run_inference(image)
+                        # logger.debug("Inference complete")
                         if not c_inference_result:
                             raise RuntimeError("Inference returned NULL Pointer")
                         # Note: c-inference result is a pointer to a struct (that itself contains pointers), not the struct itself
@@ -240,7 +237,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
         assert isinstance(num_inference_processes, int), "`num_inference_processes` must be an int"
         self.num_inference_processes = num_inference_processes
         self.inference_processes = []
-        for _ in range(self.num_inference_processes):
+        for i in range(self.num_inference_processes):
             self.inference_processes.append(
                 InferenceProcess(
                     model_path=self.model_path,
@@ -248,6 +245,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
                     request_queue=self.inference_request_queue,
                     result_queue=self.inference_result_queue,
                     metadata=metadata,
+                    process_name=f"python-cvops-inference-{i}",
                     confidence_threshold=confidence_threshold,
                     iou_threshold=iou_threshold,
                     debug=debug or cvops.config.SETTINGS.debug
@@ -265,16 +263,14 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
             _ = [p.start() for p in self.inference_processes]
             if self.debug:
                 logger.debug("Waiting for inference processes to start")
+                # TODO: This code to wait for inferences processes doesn't work
                 while not all(started):
-                    for i, p in enumerate(self.inference_processes):
-                        if not started[i]:
-                            try:
-                                result = self.inference_result_queue.get_nowait()
-                                if result == p.name:
-                                    started[i] = True
-                            except queue.Empty:
-                                pass
-                logger.debug("Inference processes started")
+                    process_name = self.inference_result_queue.get()
+                    for i, process in enumerate(self.inference_processes):
+                        if process.name == process_name:
+                            started[i] = True
+                            logger.debug("Inference Process %s started", process.name)
+                            break
             return self
         except Exception as ex:
             raise RuntimeError("Unable to start inference process") from ex
@@ -287,6 +283,9 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
 
             # Same, but for multiprocessing
             _ = [p.terminate() for p in self.inference_processes]
+            # _ = [p.join() for p in self.inference_processes]
+            # _ = [p.close() for p in self.inference_processes]
+            logger.debug("Inference processes terminated")
         except Exception as ex:  # pylint: disable=broad-exception-caught
             logger.exception(ex, "Unable to end inference process")
         finally:
@@ -329,9 +328,10 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
                         # logger.debug("Removed request queue item")  # This should only happen is
                         # something funny happens on the inference thread.
                         self.inference_request_queue.get_nowait()
-                    image_bytes = cvops.image_processor.image_to_bytes(frame)
-                    self.inference_request_queue.put_nowait(image_bytes)
-                    self.last_request_time = int(time.time() * 1000)
+                    if frame is not None:
+                        image_bytes = cvops.image_processor.image_to_bytes(frame)
+                        self.inference_request_queue.put_nowait(image_bytes)
+                        self.last_request_time = int(time.time() * 1000)
         except queue.Full:
             pass
         except queue.Empty:

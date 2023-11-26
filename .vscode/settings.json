@@ -48,9 +48,10 @@
         "venv/",
         "venv*"
     ],
-    "cmake.sourceDirectory": "/home/kevin/projects/cvez/cvops-python/cvops-inference",
+    "cmake.sourceDirectory": "${workspaceFolder}/cvops-inference",
     "cmake.autoSelectActiveFolder": false,
     "cmake.cmakePath": "/snap/bin/cmake",
+    "cmake.buildDirectory": "${workspaceFolder}/cvops-inference/build",
     "files.associations": {
         "stdexcept": "cpp",
         "iostream": "cpp",
