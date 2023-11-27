@@ -4,6 +4,7 @@ import ctypes
 import json
 import collections
 import logging
+import contextlib
 import numpy
 import cv2
 import sys
@@ -17,17 +18,29 @@ import cvops.inference.factories
 logger = logging.getLogger(__name__)
 
 
-class InferenceSessionManager(cvops.inference.c_api.CApi):
+class InferenceSessionManager(cvops.inference.c_api.CApi, contextlib.AbstractContextManager):
     """ Wrapper class around the calls to inference methods of the C API """
     session: typing.Optional[ctypes.POINTER(cvops.inference.c_interfaces.IInferenceManager)]
     session_request: _types.InferenceSessionRequest
     _is_in_context_manager: bool
 
     def __init__(self,
-                 session_request: _types.InferenceSessionRequest,
+                 session_request: typing.Optional[_types.InferenceSessionRequest] = None,
                  **kwargs
                  ) -> None:
         super().__init__(**kwargs)
+        if session_request is None:
+            assert "model_platform" in kwargs, "model_platform must be specified"
+            assert "model_path" in kwargs, "model_path must be specified"
+            assert "metadata" in kwargs, "metadata must be specified"
+            session_request_args = {
+                "model_platform": kwargs["model_platform"],
+                "model_path": kwargs["model_path"],
+                "metadata": kwargs["metadata"],
+                "confidence_threshold": kwargs.get("confidence_threshold", None),
+                "iou_threshold": kwargs.get("iou_threshold", None),
+            }
+            session_request = cvops.inference.factories.create_inference_session_request(**session_request_args)
         self.session = None
         assert isinstance(session_request, _types.InferenceSessionRequest), \
             "session_request must be an cvops.inference.c_interfaces.InferenceSessionRequest"
@@ -39,6 +52,7 @@ class InferenceSessionManager(cvops.inference.c_api.CApi):
         try:
             self._start_session()
             self._is_in_context_manager = True
+            super().__enter__()
             return self
         except Exception as ex:  # pylint: disable=broad-except
             raise RuntimeError("Unable to start session") from ex
@@ -50,6 +64,7 @@ class InferenceSessionManager(cvops.inference.c_api.CApi):
             logger.error("Unable to end session")
         finally:
             self._is_in_context_manager = False
+            super().__exit__(exc_type, exc_value, traceback)
 
     def _start_session(self) -> None:
         self.session = self.dll.start_inference_session(self.session_request_ptr)
@@ -136,7 +151,7 @@ class InferenceSessionManager(cvops.inference.c_api.CApi):
         self.dll.dispose_inference_result(result)
 
 
-class InferenceResultRenderer(cvops.inference.c_api.CApi):
+class InferenceResultRenderer(cvops.inference.c_api.CApi, contextlib.AbstractContextManager):
     """ Renders InferenceResults onto Images """
     color_palette: typing.Dict[int, typing.Tuple[int, int, int]]
     classes: typing.Dict[int, str]
@@ -178,6 +193,7 @@ class InferenceResultRenderer(cvops.inference.c_api.CApi):
             c_color_palette = ctypes.c_char_p(metadata_string.encode('utf-8'))
             self.dll.set_color_palette(c_color_palette)
             self._is_in_context_manager = True
+            super().__enter__()
         except Exception as ex:  # pylint: disable=broad-except
             raise RuntimeError("Unable to set color palette") from ex
         return self
@@ -189,6 +205,7 @@ class InferenceResultRenderer(cvops.inference.c_api.CApi):
             logger.exception(ex, "Unable to free color palette")
         finally:
             self._is_in_context_manager = False
+            super().__exit__(exc_type, exc_value, traceback)
 
     def render(self, inference_result_ptr: _types.c_inference_result_p, image: numpy.ndarray) -> None:
         """ Renders the given inference result onto an image """

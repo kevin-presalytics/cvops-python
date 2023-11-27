@@ -43,6 +43,8 @@ class DllLoader(object):
             **kwargs) -> None:
         if debug is None:
             self.debug = cvops.config.SETTINGS.debug
+        else:
+            self.debug = debug
         self.pid = os.getpid()
         self.system = platform.system()
         self.processor = platform.processor()

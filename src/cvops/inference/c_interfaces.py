@@ -90,3 +90,29 @@ MODEL_PLATFORM_C_MAP = {
     cvops.schemas.ModelPlatforms.YOLO: 1,
     cvops.schemas.ModelPlatforms.DETECTRON: 2,
 }
+
+class Tracker(ctypes.Structure):
+    """ Interface for the tracker """
+
+c_tracker_p = ctypes.POINTER(Tracker)
+
+TRACKING_ALGORITHMS_C_MAP = {
+    cvops.schemas.TrackingAlgorithmTypes.BOOSTING: 1,
+    cvops.schemas.TrackingAlgorithmTypes.MIL: 2,
+    cvops.schemas.TrackingAlgorithmTypes.KCF: 3,
+    cvops.schemas.TrackingAlgorithmTypes.TLD: 4,
+    cvops.schemas.TrackingAlgorithmTypes.MEDIANFLOW: 5,
+    cvops.schemas.TrackingAlgorithmTypes.GOTURN: 6,
+    cvops.schemas.TrackingAlgorithmTypes.MOSSE: 7,
+    cvops.schemas.TrackingAlgorithmTypes.CSRT: 8
+}
+
+
+class TrackerState(ctypes.Structure):
+    """ Interface for the tracker state """
+    _fields_ = [
+        ("boxes", c_box_p),
+        ("boxes_count", ctypes.c_int),
+    ]
+
+c_tracker_state_p = ctypes.POINTER(TrackerState)

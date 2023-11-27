@@ -21,6 +21,7 @@ class CooperativeBaseClass(abc.ABC):
         super().__init__()
 
 
+
 class LowerCaseEnum(enum.Enum):
     """ Base Class for Enums with greedy parsing of strings into enums """
 
@@ -284,3 +285,15 @@ class InferenceResult(TimeSeriesEntity):
     meshes: typing.Optional[typing.Sequence] = []
     labels: typing.Optional[typing.Sequence] = []
     milliseconds: float = 0.0
+
+
+class TrackingAlgorithmTypes(LowerCaseEnum):
+    """ Enum for the type of object tracking algorithm """
+    BOOSTING = "boosting"
+    MIL = "mil"
+    KCF = "kcf"
+    TLD = "tld"
+    MEDIANFLOW = "medianflow"
+    GOTURN = "goturn"
+    MOSSE = "mosse"
+    CSRT = "csrt"

@@ -3,6 +3,7 @@ import typing
 import ctypes
 import pathlib
 import json
+import numpy
 import cvops.schemas
 import cvops.image_processor
 import cvops.inference.c_interfaces as _types
@@ -109,3 +110,25 @@ def create_inference_session_request(
         iou_threshold=c_iou_threshold,
     )
     return request
+
+def tracker_state_ptr_to_boxes(tracker_state: _types.c_tracker_state_p) -> typing.List[cvops.schemas.Box]:
+    """ Converts a tracker state to a list of boxes """
+    boxes = []
+    for i in range(0, tracker_state.contents.boxes_count):
+        next_box = cvops.schemas.Box(
+            height=tracker_state.contents.boxes[i].height,
+            width=tracker_state.contents.boxes[i].width,
+            x=tracker_state.contents.boxes[i].x,
+            y=tracker_state.contents.boxes[i].y,
+            class_id=tracker_state.contents.boxes[i].class_id,
+            class_name=tracker_state.contents.boxes[i].class_name,
+            object_id=tracker_state.contents.boxes[i].object_id,
+            confidence=tracker_state.contents.boxes[i].confidence
+        )
+        boxes.append(next_box)
+    return boxes
+
+def frame_to_cv_mat_data(frame: numpy.ndarray) -> typing.Tuple[ctypes.c_void_p, int, int, int]:
+    """ Converts an image into values that can be passed to the cv::Mat constructor in the C Library """
+    num_channels = frame.shape[-1] if frame.ndim == 3 else 1
+    return (frame.ctypes._data, frame.shape[0], frame.shape[1], num_channels)  # pylint: disable=protected-access

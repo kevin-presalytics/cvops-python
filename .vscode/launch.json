@@ -12,6 +12,7 @@
             "program": "${workspaceFolder}/venv/bin/python",
             "processId": "${command:pickProcess}",
             "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
@@ -49,20 +50,16 @@
             "preLaunchTask": "build-c-library"
         },
         {
-            "name": "Debug Tests",
+            "name": "Debug A Test",
             "type": "python",
             "request": "launch",
             "module": "unittest",
             "args": [
-                "discover",
-                "-v",
-                "-s",
-                "./src/tests",
-                "-p",
-                "test_*.py",
-                "-t",
-                "./src"
+                "tests.test_tracker"  // <-- Test name here
             ],
+            "env": {
+                "PYTHONPATH": "./src",
+            },
             "justMyCode": true
         },
         {

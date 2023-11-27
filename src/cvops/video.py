@@ -4,7 +4,6 @@ import typing
 import pathlib
 import os
 import time
-import threading
 import queue
 import multiprocessing
 import multiprocessing.queues
@@ -75,6 +74,8 @@ class VideoPlayerBase(cvops.schemas.CooperativeBaseClass):
         """ Plays the video continuously at the video fps"""
         prev = time.time()
         for image in self.image_stream:
+            if image is None:
+                self.stop()
             if self.limit_fps:
                 time_elapsed = time.time() - prev
                 while time_elapsed < 1 / self.fps:
@@ -87,7 +88,7 @@ class VideoPlayerBase(cvops.schemas.CooperativeBaseClass):
                     self.stop()
 
     def stream(self) -> None:
-        """ Returns a generator that yields images from the video """
+        """ Play the video as a stream"""
         for image in self.image_stream:
             image = self.process_frame(image)
             yield image
