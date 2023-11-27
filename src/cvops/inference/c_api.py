@@ -73,5 +73,3 @@ class CApi(cvops.schemas.CooperativeBaseClass):
         self.dll.get_tracker_state.restype = _types.c_tracker_state_p
         self.dll.dispose_tracker_state.argtypes = [_types.c_tracker_state_p]
         self.dll.dispose_tracker_state.restype = None
-
-

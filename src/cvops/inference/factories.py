@@ -111,6 +111,7 @@ def create_inference_session_request(
     )
     return request
 
+
 def tracker_state_ptr_to_boxes(tracker_state: _types.c_tracker_state_p) -> typing.List[cvops.schemas.Box]:
     """ Converts a tracker state to a list of boxes """
     boxes = []
@@ -127,6 +128,7 @@ def tracker_state_ptr_to_boxes(tracker_state: _types.c_tracker_state_p) -> typin
         )
         boxes.append(next_box)
     return boxes
+
 
 def frame_to_cv_mat_data(frame: numpy.ndarray) -> typing.Tuple[ctypes.c_void_p, int, int, int]:
     """ Converts an image into values that can be passed to the cv::Mat constructor in the C Library """

@@ -91,8 +91,10 @@ MODEL_PLATFORM_C_MAP = {
     cvops.schemas.ModelPlatforms.DETECTRON: 2,
 }
 
+
 class Tracker(ctypes.Structure):
     """ Interface for the tracker """
+
 
 c_tracker_p = ctypes.POINTER(Tracker)
 
@@ -114,5 +116,6 @@ class TrackerState(ctypes.Structure):
         ("boxes", c_box_p),
         ("boxes_count", ctypes.c_int),
     ]
+
 
 c_tracker_state_p = ctypes.POINTER(TrackerState)

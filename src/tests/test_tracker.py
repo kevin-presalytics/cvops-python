@@ -10,7 +10,6 @@ import cvops.inference.manager
 import cvops.inference.factories
 
 
-
 class TrackerTests(unittest.TestCase):
     """ Tests for object tracking methods through the C library """
 
@@ -23,13 +22,12 @@ class TrackerTests(unittest.TestCase):
     def test_video_tracking(self):
         """ Tracks objects in a video after initial inference"""
         c_test_model_path = self.c_test_files_dir.joinpath("models", "yolov8n.onnx")
-        
+
         metadata_path = self.c_test_files_dir.joinpath("models", "yolov8n-metadata.json")
 
         with open(metadata_path, "r", encoding='utf-8') as metadata_file:
             metadata = json.load(metadata_file)
 
-        
         max_frames = 100
 
         video_tracker_args = {
@@ -48,8 +46,12 @@ class TrackerTests(unittest.TestCase):
         tracker_state = None
         initial_inference_result = None
 
-        class TestVideoTracker(cvops.tracking.VideoObjectTrackerMixin, cvops.inference.manager.InferenceSessionManager, cvops.video.VideoPlayerBase):
+        class TestVideoTracker(
+                cvops.tracking.VideoObjectTrackerMixin,
+                cvops.inference.manager.InferenceSessionManager,
+                cvops.video.VideoPlayerBase):
             """ Test class for testing the video tracking Mixin """
+
             def __init__(self, **kwargs):
                 super().__init__(**kwargs)
                 self.frame_count = 0
@@ -65,10 +67,12 @@ class TrackerTests(unittest.TestCase):
                         self.stop()
                     elif self.frame_count == 0:
                         c_initial_inference_result = self.run_inference(frame)
-                        self.initial_inference_result = cvops.inference.factories.inference_result_from_c_type(c_initial_inference_result)
+                        self.initial_inference_result = cvops.inference.factories.inference_result_from_c_type(
+                            c_initial_inference_result)
                         new_boxes = [next(b for b in self.initial_inference_result.boxes if b.class_name == "person")]
                         self.initial_inference_result.boxes = new_boxes
-                        self.initial_inference_result_ptr = cvops.inference.factories.inference_result_to_c_type_ptr(self.initial_inference_result)
+                        self.initial_inference_result_ptr = cvops.inference.factories.inference_result_to_c_type_ptr(
+                            self.initial_inference_result)
                         self.dispose_inference_result(c_initial_inference_result)
                         self.update_tracker(frame, self.initial_inference_result_ptr)
                     else:
@@ -79,7 +83,6 @@ class TrackerTests(unittest.TestCase):
                     self.exception = ex
                     raise RuntimeError from ex
 
-
         with TestVideoTracker(**video_tracker_args) as video_tracker:
             video_tracker.play()
             if video_tracker.exception:
@@ -88,10 +91,7 @@ class TrackerTests(unittest.TestCase):
             tracker_state = cvops.inference.factories.tracker_state_ptr_to_boxes(tracker_state_ptr)
             initial_inference_result = video_tracker.initial_inference_result
             video_tracker.dispose_tracker_state(tracker_state_ptr)
-        
-        
+
         # Assert
         self.assertIsNotNone(tracker_state)
         self.assertIsNotNone(initial_inference_result)
-
-

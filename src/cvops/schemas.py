@@ -21,7 +21,6 @@ class CooperativeBaseClass(abc.ABC):
         super().__init__()
 
 
-
 class LowerCaseEnum(enum.Enum):
     """ Base Class for Enums with greedy parsing of strings into enums """
 

@@ -18,8 +18,9 @@ class VideoObjectTrackerMixin(cvops.inference.c_api.CApi, contextlib.AbstractCon
     _tracker_ptr: _types.c_tracker_p
     tracking_algorithm_type: cvops.schemas.TrackingAlgorithmTypes
 
-    def __init__(self, 
-                 tracking_algorithm_type: typing.Union[str, cvops.schemas.TrackingAlgorithmTypes] = cvops.schemas.TrackingAlgorithmTypes.MOSSE,
+    def __init__(self,
+                 tracking_algorithm_type: typing.Union[str,
+                                                       cvops.schemas.TrackingAlgorithmTypes] = cvops.schemas.TrackingAlgorithmTypes.MOSSE,
                  **kwargs):
         super().__init__(**kwargs)
         if isinstance(tracking_algorithm_type, str):
@@ -50,7 +51,10 @@ class VideoObjectTrackerMixin(cvops.inference.c_api.CApi, contextlib.AbstractCon
         cv_mat = cvops.inference.factories.frame_to_cv_mat(image)
         self.dll.track_image(self._tracker_ptr, *cv_mat)
 
-    def update_tracker(self, image: numpy.ndarray, inference_result: typing.Union[_types.c_inference_result_p, cvops.schemas.InferenceResult]) -> None:
+    def update_tracker(self,
+                       image: numpy.ndarray,
+                       inference_result: typing.Union[_types.c_inference_result_p,
+                                                      cvops.schemas.InferenceResult]) -> None:
         """ Updates the tracker with the given image """
         if self._tracker_ptr is None:
             raise RuntimeError("Tracker not initialized")
@@ -90,7 +94,6 @@ class VideoObjectTrackerMixin(cvops.inference.c_api.CApi, contextlib.AbstractCon
             return self
         except Exception as ex:  # pylint: disable=broad-exception-caught
             raise RuntimeError("Unable to start tracking") from ex
-
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         try:
