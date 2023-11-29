@@ -52,7 +52,7 @@
     ],
     "cmake.sourceDirectory": "${workspaceFolder}/cvops-inference",
     "cmake.autoSelectActiveFolder": false,
-    "cmake.cmakePath": "/snap/bin/cmake",
+    "cmake.cmakePath": "${workspaceFolder}/venv/bin/cmake",
     "cmake.buildDirectory": "${workspaceFolder}/cvops-inference/build",
     "files.associations": {
         "stdexcept": "cpp",
@@ -115,7 +115,13 @@
         "cinttypes": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "*.ipp": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp"
     }
     
 }
