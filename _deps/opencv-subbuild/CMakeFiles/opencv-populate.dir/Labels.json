@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/CMakeFiles/opencv-populate"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/CMakeFiles/opencv-populate.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/CMakeFiles/opencv-populate-complete.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-build.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-configure.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-download.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-install.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-patch.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-test.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"opencv-populate"
+		],
+		"name" : "opencv-populate"
+	}
+}

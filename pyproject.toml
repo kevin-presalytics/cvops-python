@@ -10,7 +10,7 @@ authors = [
 ]
 description = "A python client for working with the cvops.io platform"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -54,6 +54,7 @@ dev = [
 
 [project.scripts]
 bootstrap = "tools:bootstrap_cmake"
+clean = "tools:clean"
 run_tests = "tools:run_tests"
 install_hooks = "tools:install_hooks"
 

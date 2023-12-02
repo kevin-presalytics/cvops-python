@@ -48,7 +48,7 @@ class CApi(cvops.schemas.CooperativeBaseClass):
             ctypes.c_int,
         ]
         self.dll.render_inference_result.restype = None
-        self.dll.create_tracker.argtypes = [ctypes.c_int]
+        self.dll.create_tracker.argtypes = None
         self.dll.create_tracker.restype = _types.c_tracker_p
         self.dll.track_image.argtypes = [
             _types.c_tracker_p,
@@ -70,6 +70,4 @@ class CApi(cvops.schemas.CooperativeBaseClass):
         ]
         self.dll.update_tracker.restype = None
         self.dll.get_tracker_state.argtypes = [_types.c_tracker_p]
-        self.dll.get_tracker_state.restype = _types.c_tracker_state_p
-        self.dll.dispose_tracker_state.argtypes = [_types.c_tracker_state_p]
-        self.dll.dispose_tracker_state.restype = None
+        self.dll.get_tracker_state.restype = _types.c_inference_request_p

@@ -1,0 +1,3 @@
+/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/CMakeFiles/opencv-populate.dir
+/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/CMakeFiles/edit_cache.dir
+/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/CMakeFiles/rebuild_cache.dir

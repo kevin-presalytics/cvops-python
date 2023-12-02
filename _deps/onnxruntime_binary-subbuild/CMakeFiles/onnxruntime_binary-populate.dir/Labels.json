@@ -1,0 +1,49 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/CMakeFiles/onnxruntime_binary-populate"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/CMakeFiles/onnxruntime_binary-populate.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/CMakeFiles/onnxruntime_binary-populate-complete.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/onnxruntime_binary-populate-prefix/src/onnxruntime_binary-populate-stamp/onnxruntime_binary-populate-build.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/onnxruntime_binary-populate-prefix/src/onnxruntime_binary-populate-stamp/onnxruntime_binary-populate-configure.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/onnxruntime_binary-populate-prefix/src/onnxruntime_binary-populate-stamp/onnxruntime_binary-populate-copyfile.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/onnxruntime_binary-populate-prefix/src/onnxruntime_binary-populate-stamp/onnxruntime_binary-populate-download.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/onnxruntime_binary-populate-prefix/src/onnxruntime_binary-populate-stamp/onnxruntime_binary-populate-install.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/onnxruntime_binary-populate-prefix/src/onnxruntime_binary-populate-stamp/onnxruntime_binary-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/onnxruntime_binary-populate-prefix/src/onnxruntime_binary-populate-stamp/onnxruntime_binary-populate-patch.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/onnxruntime_binary-populate-prefix/src/onnxruntime_binary-populate-stamp/onnxruntime_binary-populate-test.rule"
+		},
+		{
+			"file" : "/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/onnxruntime_binary-populate-prefix/src/onnxruntime_binary-populate-stamp/onnxruntime_binary-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"onnxruntime_binary-populate"
+		],
+		"name" : "onnxruntime_binary-populate"
+	}
+}

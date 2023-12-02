@@ -1,0 +1,14 @@
+opts
+
+-DCMAKE_BUILD_TYPE:STRING=Debug
+-DBUILD_SHARED_LIBS=ON
+-DCMAKE_BUILD_TYPE=Debug
+-DBUILD_opencv_python3=OFF
+-DBUILD_opencv_python_bindings_generator=ON
+-DBUILD_JAVA=OFF
+-DBUILD_FAT_JAVA_LIB=OFF
+-DBUILD_opencv_java_bindings_generator=OFF
+-DBUILD_opencv_js=OFF
+# #             -DBUILD_opencv_python2=OFF
+# #             -DENABLE_PYLINT=OFF
+# #             -DENABLE_FLAKE8=OFF

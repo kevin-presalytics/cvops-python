@@ -1,0 +1,12 @@
+# This is a generated file and its contents are an internal implementation detail.
+# The download step will be re-executed if anything in this file changes.
+# No other meaning or use of this file is supported.
+
+method=url
+command=/home/kevin/Projects/cvops/cvops-python/venv/lib/python3.10/site-packages/cmake/data/bin/cmake;-P;/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/onnxruntime_binary-populate-prefix/src/onnxruntime_binary-populate-stamp/download-onnxruntime_binary-populate.cmake;COMMAND;/home/kevin/Projects/cvops/cvops-python/venv/lib/python3.10/site-packages/cmake/data/bin/cmake;-P;/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-subbuild/onnxruntime_binary-populate-prefix/src/onnxruntime_binary-populate-stamp/verify-onnxruntime_binary-populate.cmake
+source_dir=/home/kevin/Projects/cvops/cvops-python/_deps/onnxruntime_binary-src
+work_dir=/home/kevin/Projects/cvops/cvops-python/_deps
+url(s)=https://github.com/microsoft/onnxruntime/releases/download/v1.12.1/onnxruntime-linux-x64-1.12.1.tgz
+hash=
+no_extract=YES
+

@@ -8,7 +8,7 @@ Install prequisite binrary packages
 
 ```bash
 # Linux
-sudo apt install libopencv-dev libboost-all-dev libjsoncpp- python3.8-dbg
+sudo apt install libopencv-dev libboost-all-dev libjsoncpp-dev python3.10-dbg clang lldb
 ```
 
 Activate a virtual environment, then run the following:

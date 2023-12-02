@@ -1,0 +1,12 @@
+# This is a generated file and its contents are an internal implementation detail.
+# The download step will be re-executed if anything in this file changes.
+# No other meaning or use of this file is supported.
+
+method=url
+command=/home/kevin/Projects/cvops/cvops-python/venv/lib/python3.10/site-packages/cmake/data/bin/cmake;-P;/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/download-opencv-populate.cmake;COMMAND;/home/kevin/Projects/cvops/cvops-python/venv/lib/python3.10/site-packages/cmake/data/bin/cmake;-P;/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/verify-opencv-populate.cmake;COMMAND;/home/kevin/Projects/cvops/cvops-python/venv/lib/python3.10/site-packages/cmake/data/bin/cmake;-P;/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/extract-opencv-populate.cmake
+source_dir=/home/kevin/Projects/cvops/cvops-python/_deps/opencv-src
+work_dir=/home/kevin/Projects/cvops/cvops-python/_deps
+url(s)=https://github.com/opencv/opencv/archive/refs/tags/4.8.1.tar.gz
+hash=
+no_extract=
+

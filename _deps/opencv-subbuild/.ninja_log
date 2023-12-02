@@ -1,0 +1,21 @@
+# ninja log v5
+0	6	1701483634526870925	opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-mkdir	9583c9260c88bbd8
+0	6	1701483634526870925	/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-mkdir	9583c9260c88bbd8
+6	4461	1701483638982918498	opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-download	f42e2f46561ded43
+6	4461	1701483638982918498	/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-download	f42e2f46561ded43
+4461	4516	1701483639038919096	opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-update	b369418eeda5756
+4461	4516	1701483639038919096	/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-update	b369418eeda5756
+4516	4554	1701483639074919480	opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-patch	f5f36ea5426b77db
+4516	4554	1701483639074919480	/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-patch	f5f36ea5426b77db
+4554	4597	1701483639118919950	opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-configure	5676cc7d85916b2c
+4554	4597	1701483639118919950	/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-configure	5676cc7d85916b2c
+4597	4641	1701483639162920419	opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-build	4c517745a2468f18
+4597	4641	1701483639162920419	/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-build	4c517745a2468f18
+4641	4657	1701483639178920590	opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-install	ee09f75b7a9657a2
+4641	4657	1701483639178920590	/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-install	ee09f75b7a9657a2
+4657	4664	1701483639186920675	opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-test	c269254fdd72859b
+4657	4664	1701483639186920675	/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-test	c269254fdd72859b
+4664	4674	1701483639194920761	CMakeFiles/opencv-populate-complete	a3772991472978c5
+4664	4674	1701483639194920761	opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-done	a3772991472978c5
+4664	4674	1701483639194920761	/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/CMakeFiles/opencv-populate-complete	a3772991472978c5
+4664	4674	1701483639194920761	/home/kevin/Projects/cvops/cvops-python/_deps/opencv-subbuild/opencv-populate-prefix/src/opencv-populate-stamp/opencv-populate-done	a3772991472978c5

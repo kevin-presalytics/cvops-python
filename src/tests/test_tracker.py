@@ -6,6 +6,7 @@ import tests
 import cvops.video
 import cvops.tracking
 import cvops.workflows
+import cvops.image_processor
 import cvops.inference.manager
 import cvops.inference.factories
 
@@ -39,6 +40,7 @@ class TrackerTests(unittest.TestCase):
             "iou_threshold": 0.3,
             "show_video": True,
             "debug": True,
+            "color_palette": cvops.image_processor.generate_color_palette(len(metadata["classes"])),
         }
 
         # Act
@@ -87,10 +89,10 @@ class TrackerTests(unittest.TestCase):
             video_tracker.play()
             if video_tracker.exception:
                 raise video_tracker.exception
-            tracker_state_ptr = video_tracker.get_tracker_state()
-            tracker_state = cvops.inference.factories.tracker_state_ptr_to_boxes(tracker_state_ptr)
+            tracker_state_result = video_tracker.get_tracker_state()
+            tracker_state = cvops.inference.factories.inference_result_from_c_type(tracker_state_result)
             initial_inference_result = video_tracker.initial_inference_result
-            video_tracker.dispose_tracker_state(tracker_state_ptr)
+            video_tracker.dispose_inference_result(tracker_state_result)
 
         # Assert
         self.assertIsNotNone(tracker_state)
