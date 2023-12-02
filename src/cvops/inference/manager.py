@@ -173,7 +173,7 @@ class InferenceResultRenderer(cvops.inference.c_api.CApi, contextlib.AbstractCon
         if color_palette:
             if not isinstance(color_palette, dict):
                 raise TypeError("Color palette must be a list")
-            if not all(isinstance(value, collections.Sequence) for value in color_palette.values()):
+            if not all(isinstance(value, collections.abc.Sequence) for value in color_palette.values()):
                 raise TypeError("Color palette values must be tuples or lists")
             if not all(len(value) == 3 for value in color_palette.values()):
                 raise ValueError("Color palette values must be tuples or lists  of length 3")

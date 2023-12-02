@@ -6,33 +6,41 @@ import logging
 import numpy
 import cvops.schemas
 import cvops.inference.factories
-import cvops.inference.c_api
+import cvops.inference.manager
 import cvops.inference.c_interfaces as _types
 
 
 logger = logging.getLogger(__name__)
 
 
-class VideoObjectTrackerMixin(cvops.inference.c_api.CApi, contextlib.AbstractContextManager):
+class VideoObjectTrackerMixin(cvops.inference.manager.InferenceResultRenderer, contextlib.AbstractContextManager):
     """ Wrapper class around the calls to object tracking methods of the C API """
     _tracker_ptr: _types.c_tracker_p
-    tracking_algorithm_type: cvops.schemas.TrackingAlgorithmTypes
 
     def __init__(self,
-                 tracking_algorithm_type: typing.Union[str,
-                                                       cvops.schemas.TrackingAlgorithmTypes] = cvops.schemas.TrackingAlgorithmTypes.MOSSE,
+                 color_palette: typing.Optional[typing.List[typing.Tuple[int, int, int]]] = None,
+                 classes: typing.Optional[typing.List[str]] = None,
+                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
                  **kwargs):
-        super().__init__(**kwargs)
-        if isinstance(tracking_algorithm_type, str):
-            tracking_algorithm_type = cvops.schemas.TrackingAlgorithmTypes(tracking_algorithm_type)
-        assert isinstance(tracking_algorithm_type, cvops.schemas.TrackingAlgorithmTypes), \
-            "tracking_algorithm_type must be a cvops.schemas.TrackingAlgorithmType"
-        self.tracking_algorithm_type = tracking_algorithm_type
+        if not classes:
+            if metadata:
+                classes = metadata.get("classes", None)
+                if not classes:
+                    raise RuntimeError("Unable to determine classes.  \
+                                        Please supplier a classes keyword argument.")
+        if not color_palette:
+            color_palette = cvops.image_processor.generate_color_palette(len(classes))
+
+        if not color_palette or not classes:
+            raise RuntimeError("Unable to determine color palette.  \
+                                Please supplier a color_palette keyword argument or a \
+                                metadata argument with a color_palette or classes key")
+        super().__init__(color_palette=color_palette, classes=classes, metadata=metadata, **kwargs)
+        self._tracker_ptr = None
 
     def create_tracker(self) -> None:
         """ Creates a tracker """
-        c_tracking_algorithm_type = _types.TRACKING_ALGORITHMS_C_MAP[self.tracking_algorithm_type]
-        self._tracker_ptr = self.dll.create_tracker(ctypes.c_int(c_tracking_algorithm_type))
+        self._tracker_ptr = self.dll.create_tracker()
         if not self._tracker_ptr:
             raise RuntimeError("Unable to create tracker")  # pylint: disable=broad-exception-raised
 
