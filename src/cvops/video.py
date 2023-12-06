@@ -90,8 +90,7 @@ class VideoPlayerBase(cvops.schemas.CooperativeBaseClass):
     def stream(self) -> None:
         """ Play the video as a stream"""
         for image in self.image_stream:
-            image = self.process_frame(image)
-            yield image
+            self.process_frame(image)
 
     def stop(self) -> None:
         """ Stops the video """

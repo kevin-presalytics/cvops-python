@@ -247,6 +247,7 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
     def __exit__(self, exc_type, exc_value, traceback):
         try:
             self.onnx_session.close()
+            self.onnx_session = None
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 

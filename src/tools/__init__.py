@@ -69,18 +69,28 @@ def bootstrap_cmake():
         subprocess.run(CMAKE_BUILD_COMMAND, cwd=C_SOURCE_DIR, check=True)
     except FileNotFoundError as f_err:
         message = "Invalid path to C library source directory.  Did you install the project in editable mode using `pip install -e .[dev]`?"
-        raise RuntimeError(message) from f_err
+        logger.error(message)
+        sys.exit(1)
+    except subprocess.CalledProcessError as cp_err:
+        logger.error(cp_err.stderr)
+        sys.exit(1)
     except Exception as ex:  # pylint: disable=broad-exception-caught
         logger.exception(ex, "Unable to build C library")
+        sys.exit(1)
+    # Note: Removed copy in favor of usin the install emthod
+    # TODO: Enablle installation as a tool.
+    # try:
+    #     target_lib_dir = pathlib.Path(ROOT_DIR, "src", "cvops", "inference", "lib")
 
-    target_lib_dir = pathlib.Path(ROOT_DIR, "src", "cvops", "inference", "lib")
+    #     if not target_lib_dir.exists():
+    #         target_lib_dir.mkdir()
 
-    if not target_lib_dir.exists():
-        target_lib_dir.mkdir()
-
-    for so in C_SOURCE_DIR.glob("**/*.so*"):
-        print(f"Copying {so} to {target_lib_dir}")
-        shutil.copy(so, target_lib_dir)
+    #     for so in C_SOURCE_DIR.glob("**/*.so*"):
+    #         print(f"Copying {so} to {target_lib_dir}")
+    #         shutil.copy(so, target_lib_dir)
+    # except Exception as ex:
+    #     logger.exception(ex, "Unable to copy C library")
+    #     sys.exit(1)
 
 def run_tests():
     """ Runs all tests """
@@ -117,3 +127,4 @@ def install_hooks():
 def clean():
     """ Cleans the build directories """
     clean_cmake()
+

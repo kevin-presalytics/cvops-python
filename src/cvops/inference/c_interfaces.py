@@ -1,5 +1,6 @@
 """ DTOs between the CVOps C library and the Python library """
 import ctypes
+import logging
 import cvops.schemas
 
 c_float_p = ctypes.POINTER(ctypes.c_float)
@@ -75,8 +76,6 @@ def dispose_inference_result(result: c_inference_result_p) -> None:
     dll = cvops.inference.loader.get_dll_instance()
     dll.dispose_inference_result(result)
 
-
-# c_inference_result_p.__del__ = dispose_inference_result
 
 
 class IInferenceManager(ctypes.Structure):

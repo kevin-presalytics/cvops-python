@@ -1,6 +1,7 @@
 """ Tests for the object tracking classes """
 import unittest
 import json
+import logging
 import ctypes
 import tests
 import cvops.video
@@ -9,6 +10,8 @@ import cvops.workflows
 import cvops.inference.manager
 import cvops.inference.factories
 
+
+logger = logging.getLogger(__name__)
 
 class TrackerTests(unittest.TestCase):
     """ Tests for object tracking methods through the C library """
@@ -69,8 +72,8 @@ class TrackerTests(unittest.TestCase):
                         c_initial_inference_result = self.run_inference(frame)
                         self.initial_inference_result = cvops.inference.factories.inference_result_from_c_type(
                             c_initial_inference_result)
-                        new_boxes = [next(b for b in self.initial_inference_result.boxes if b.class_name == "person")]
-                        self.initial_inference_result.boxes = new_boxes
+                        # new_boxes = [next(b for b in self.initial_inference_result.boxes if b.class_name == "person")]
+                        # self.initial_inference_result.boxes = new_boxes
                         self.initial_inference_result_ptr = cvops.inference.factories.inference_result_to_c_type_ptr(
                             self.initial_inference_result)
                         self.dispose_inference_result(c_initial_inference_result)
@@ -84,14 +87,18 @@ class TrackerTests(unittest.TestCase):
                     raise RuntimeError from ex
 
         with TestVideoTracker(**video_tracker_args) as video_tracker:
-            video_tracker.play()
+            video_tracker.stream()
             if video_tracker.exception:
                 raise video_tracker.exception
             tracker_state_ptr = video_tracker.get_tracker_state()
             tracker_state = cvops.inference.factories.tracker_state_ptr_to_boxes(tracker_state_ptr)
             initial_inference_result = video_tracker.initial_inference_result
-            video_tracker.dispose_tracker_state(tracker_state_ptr)
+            video_tracker.dispose_inference_result(tracker_state_ptr)
 
         # Assert
         self.assertIsNotNone(tracker_state)
         self.assertIsNotNone(initial_inference_result)
+        self.assertGreater(len(tracker_state), 0)
+
+
+        

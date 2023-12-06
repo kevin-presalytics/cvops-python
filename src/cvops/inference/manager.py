@@ -60,6 +60,7 @@ class InferenceSessionManager(cvops.inference.c_api.CApi, contextlib.AbstractCon
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         try:
             self.end_session()
+    
         except Exception:  # pylint: disable=broad-except
             logger.error("Unable to end session")
         finally:

@@ -56,6 +56,7 @@ dev = [
 bootstrap = "tools:bootstrap_cmake"
 run_tests = "tools:run_tests"
 install_hooks = "tools:install_hooks"
+clean = "tools:clean"
 
 
 [project.urls]

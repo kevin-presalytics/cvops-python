@@ -70,4 +70,4 @@ class CApi(cvops.schemas.CooperativeBaseClass):
         ]
         self.dll.update_tracker.restype = None
         self.dll.get_tracker_state.argtypes = [_types.c_tracker_p]
-        self.dll.get_tracker_state.restype = _types.c_inference_request_p
+        self.dll.get_tracker_state.restype = _types.c_inference_result_p

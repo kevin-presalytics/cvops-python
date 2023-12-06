@@ -56,8 +56,14 @@ class VideoObjectTrackerMixin(cvops.inference.manager.InferenceResultRenderer, c
             raise RuntimeError("Tracker not initialized")
         if not isinstance(image, numpy.ndarray):
             raise RuntimeError("image must be a numpy.ndarray")
-        cv_mat = cvops.inference.factories.frame_to_cv_mat(image)
-        self.dll.track_image(self._tracker_ptr, *cv_mat)
+        num_channels = image.shape[-1] if image.ndim == 3 else 1
+        self.dll.track_image(
+            self._tracker_ptr,
+            image.ctypes._data,  # pylint: disable=protected-access
+            image.shape[0],
+            image.shape[1],
+            num_channels
+        )
 
     def update_tracker(self,
                        image: numpy.ndarray,
@@ -91,11 +97,11 @@ class VideoObjectTrackerMixin(cvops.inference.manager.InferenceResultRenderer, c
         """ Disposes the tracker state """
         if tracker_state_ptr:
             try:
-                self.dll.dispose_tracker_state(tracker_state_ptr)
+                self.dll.dispose_inference_result(tracker_state_ptr)
             except BaseException:  # pylint: disable=broad-exception-caught
                 pass
 
-    def __enter__(self) -> "VideoObjectTracker":
+    def __enter__(self) -> "VideoObjectTrackerMixin":
         try:
             super().__enter__()
             self.create_tracker()
