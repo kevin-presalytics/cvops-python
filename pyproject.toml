@@ -58,6 +58,7 @@ run_tests = "tools:run_tests"
 install_hooks = "tools:install_hooks"
 clean = "tools:clean"
 lint = "tools:lint"
+update_submodules = "tools:update_submodules"
 
 
 [project.urls]
