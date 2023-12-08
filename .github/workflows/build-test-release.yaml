@@ -14,7 +14,7 @@ jobs:
           python-version: "3.10"
       - name: Run linter
         run: |
-          source .venv/bin/activate
+          source venv/bin/activate
           lint
 
   test:
