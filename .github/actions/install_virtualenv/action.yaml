@@ -9,16 +9,16 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - id: "Install Python"
+    - id: "install-python"
       uses: "actions/setup-python@v2"
       with:
         python-version: "${{ inputs.python-version }}"
-    - id: "Create virtual environment"
+    - id: "create-virutal-enviroment"
       shell: "bash"
       run: |
         python -m venv venv
         echo "::set-output name=virtualenv-path::venv"
-    - id: "Install dependencies"
+    - id: "install-dependencies"
       shell: "bash"
       run: |
         source venv/bin/activate
