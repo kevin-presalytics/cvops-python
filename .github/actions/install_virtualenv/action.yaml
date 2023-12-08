@@ -13,6 +13,11 @@ runs:
       uses: "actions/setup-python@v2"
       with:
         python-version: "${{ inputs.python-version }}"
+    - id: "cache-dependencies"
+      uses: "actions/cache@v3"
+      with:
+        path: "venv"
+        key: "venv-${{ hashFiles('**/pyproject.toml') }}"
     - id: "create-virutal-enviroment"
       shell: "bash"
       run: |
