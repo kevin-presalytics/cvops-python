@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: Instal Ninja Build System
+        uses: seanmiddleditch/gha-setup-ninja@master
       - name: Install Virtual Environment
         uses: ./.github/actions/install_virtualenv
         with:
