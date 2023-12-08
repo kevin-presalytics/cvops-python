@@ -1,6 +1,5 @@
 """ DTOs between the CVOps C library and the Python library """
 import ctypes
-import logging
 import cvops.schemas
 
 c_float_p = ctypes.POINTER(ctypes.c_float)
@@ -66,7 +65,7 @@ class InferenceResult(ctypes.Structure):
 c_inference_result_p = ctypes.POINTER(InferenceResult)
 
 
-def dispose_inference_result(result: c_inference_result_p) -> None:
+def dispose_inference_result(result: c_inference_result_p) -> None:  # type: ignore[valid-type]
     """ Disposes the inference result
     Notes:
         * This is called by the python garbage collector when the object is no longer referenced
@@ -74,8 +73,8 @@ def dispose_inference_result(result: c_inference_result_p) -> None:
     """
     import cvops.inference.loader  # pylint: disable=import-outside-toplevel, redefined-outer-name
     dll = cvops.inference.loader.get_dll_instance()
+    assert dll is not None
     dll.dispose_inference_result(result)
-
 
 
 class IInferenceManager(ctypes.Structure):

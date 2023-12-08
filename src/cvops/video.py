@@ -44,13 +44,13 @@ class VideoPlayerBase(cvops.schemas.CooperativeBaseClass):
         self.limit_fps = limit_fps
 
         # Get openCV version
-        (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
+        (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')  # type: ignore[attr-defined] # pylint: disable=no-member, unused-variable
 
         # With webcam get(CV_CAP_PROP_FPS) does not work.
         # Let's see for ourselves.
 
         if int(major_ver) < 3:
-            self.fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)
+            self.fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)  # type: ignore[attr-defined]
         else:
             self.fps = self.cap.get(cv2.CAP_PROP_FPS)
 
@@ -107,7 +107,7 @@ class VideoPlayerBase(cvops.schemas.CooperativeBaseClass):
     def __del__(self) -> None:
         try:
             self.stop()
-        except BaseException:  # pylint: disable=bare-except
+        except BaseException:  # pylint: disable=broad-exception-caught
             pass
 
 
@@ -206,7 +206,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
         This class is
     """
     model_path: pathlib.Path
-    inference_request_queue: "multiprocessing.queues.Queue[numpy.ndarray]"
+    inference_request_queue: "multiprocessing.queues.Queue[bytes]"
     inference_result_queue: "multiprocessing.queues.Queue[cvops.schemas.InferenceResult]"
     inference_processes: typing.List[InferenceProcess]
     last_result: typing.Optional[cvops.inference.c_interfaces.InferenceResult]
@@ -260,7 +260,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
         try:
             super().__enter__()
             started = [False for _ in range(self.num_inference_processes)]
-            _ = [p.start() for p in self.inference_processes]
+            _ = [p.start() for p in self.inference_processes]  # type: ignore
             if self.debug:
                 logger.debug("Waiting for inference processes to start")
                 # TODO: This code to wait for inferences processes doesn't work
@@ -282,7 +282,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
             # self.inference_process.join()
 
             # Same, but for multiprocessing
-            _ = [p.terminate() for p in self.inference_processes]
+            _ = [p.terminate() for p in self.inference_processes]  # type: ignore[func-returns-value]
             # _ = [p.join() for p in self.inference_processes]
             # _ = [p.close() for p in self.inference_processes]
             logger.debug("Inference processes terminated")

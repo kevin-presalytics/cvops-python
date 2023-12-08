@@ -8,16 +8,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - name: Install Virtual Environment
+        uses: ./.github/actions/install_virtualenv
         with:
-          python-version: 3.x
-      - name: Activate Virtualenv
-        run: source venv/bin/activate
-      - name: Install dependencies
-        run: pip install -e .[dev]
+          python-version: 3.10
       - name: Run linter
-        run: PYTHONPATH=./src python -m pylint cvops tools tests
+        run: |
+          source .venv/bin/activate
+          lint
 
   test:
     name: Test Python
@@ -26,16 +24,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - name: Install Virtual Environment
+        uses: ./.github/actions/install_virtualenv
         with:
-          python-version: 3.x
-      - name: Activate Virtualenv
-        run: source venv/bin/activate
-      - name: Install dependencies
-        run: pip install -e .[dev]
+          python-version: 3.10
       - name: Run tests
-        run: run_tests
+        run: |
+          source venv/bin/activate
+          run_tests
 
         
 

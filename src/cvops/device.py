@@ -97,7 +97,7 @@ class DeviceManager(cvops.events.EventManager):
     def activate_device(self):
         """ Activates the device with the MQTT Broker"""
         if not self.is_connected:
-            return None
+            return
         self.device.activation_status = "Active"
         self.device.device_info = {
             "os": platform.system(),
@@ -192,9 +192,9 @@ class DeviceManager(cvops.events.EventManager):
                     timer += delay
                     if timer > timeout:
                         raise TimeoutError("Timeout waiting for device details")
-        except KeyError:
+        except KeyError as err:
             raise ValueError(
-                f"Invalid watch dictionary. Key \"{key}\" does not exist on DeviceManager")  # pylint: disable=raise-missing-from
+                f"Invalid watch dictionary. Key \"{key}\" does not exist on DeviceManager") from err # pylint: disable=raise-missing-from
 
     def handle_workspace_details_response(self, event: cvops.events.WorkspaceDetailsResponseEvent):
         """ Handles the workspace details response from the MQTT Broker"""

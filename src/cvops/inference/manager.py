@@ -1,5 +1,6 @@
-# Manager classes for handling resources and methods located in the C library
+""" Manager classes for handling resources and methods located in the C library """
 import typing
+import sys
 import ctypes
 import json
 import collections
@@ -7,7 +8,6 @@ import logging
 import contextlib
 import numpy
 import cv2
-import sys
 import cvops.schemas
 import cvops.inference
 import cvops.inference.c_api
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class InferenceSessionManager(cvops.inference.c_api.CApi, contextlib.AbstractContextManager):
     """ Wrapper class around the calls to inference methods of the C API """
-    session: typing.Optional[ctypes.POINTER(cvops.inference.c_interfaces.IInferenceManager)]
+    session: typing.Optional[ctypes.POINTER[cvops.inference.c_interfaces.IInferenceManager]]  # type: ignore
     session_request: _types.InferenceSessionRequest
     _is_in_context_manager: bool
 
@@ -60,7 +60,7 @@ class InferenceSessionManager(cvops.inference.c_api.CApi, contextlib.AbstractCon
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         try:
             self.end_session()
-    
+
         except Exception:  # pylint: disable=broad-except
             logger.error("Unable to end session")
         finally:
@@ -74,7 +74,7 @@ class InferenceSessionManager(cvops.inference.c_api.CApi, contextlib.AbstractCon
 
     def _run_inference(self,
                        request: _types.InferenceRequest
-                       ) -> _types.InferenceResult:
+                       ) -> _types.c_inference_result_p:  # type: ignore
         """ Runs inference on the given image """
         try:
             result_ptr = self.dll.run_inference(self.session, request)
@@ -88,8 +88,7 @@ class InferenceSessionManager(cvops.inference.c_api.CApi, contextlib.AbstractCon
             if msg:
                 logger.error(msg)
                 raise RuntimeError(msg) from ex
-            else:
-                raise ex
+            raise ex
         finally:
             sys.stdout.flush()
 
@@ -97,7 +96,7 @@ class InferenceSessionManager(cvops.inference.c_api.CApi, contextlib.AbstractCon
                       image: typing.Union[numpy.ndarray, bytes],
                       name: str = "image",
                       draw_detections: bool = False
-                      ) -> _types.c_inference_result_p:
+                      ) -> _types.c_inference_result_p:  # type: ignore
         """ Runs inference on the given image """
         if not self._is_in_context_manager:
             raise RuntimeError("Must use InferenceSessionManager in a context manager")
@@ -128,17 +127,17 @@ class InferenceSessionManager(cvops.inference.c_api.CApi, contextlib.AbstractCon
                             name: str = "",
                             draw_detections: bool = False,
                             num_inferences: int = 5
-                            ) -> _types.c_inference_result_p:
+                            ) -> _types.c_inference_result_p:  # type: ignore
         """ Runs inference on the given image multiple times, and return the mode result """
         results = []
         detections = []
-        for i in range(num_inferences):
+        for _ in range(num_inferences):
             result_ptr = self.run_inference(image, name, draw_detections)
             results.append(result_ptr)
-            detections.append(result_ptr.contents.boxes_count)
+            detections.append(result_ptr.contents.boxes_count)  # type: ignore[attr-defined]
 
         mode = max(set(detections), key=detections.count)
-        return next(result for result in results if result.contents.boxes_count == mode)
+        return next(result for result in results if result.contents.boxes_count == mode)  # type: ignore[attr-defined]
 
     def get_error(self) -> str:
         """ Gets error message from the C Library's global error container """
@@ -147,7 +146,7 @@ class InferenceSessionManager(cvops.inference.c_api.CApi, contextlib.AbstractCon
             return c_error.decode('utf-8')
         return c_error
 
-    def dispose_inference_result(self, result: _types.c_inference_result_p) -> None:
+    def dispose_inference_result(self, result: _types.c_inference_result_p) -> None:  # type: ignore
         """ Disposes the inference result """
         self.dll.dispose_inference_result(result)
 
@@ -160,7 +159,7 @@ class InferenceResultRenderer(cvops.inference.c_api.CApi, contextlib.AbstractCon
 
     def __init__(self,
                  classes: typing.Dict[int, str],
-                 color_palette: typing.Optional[typing.List[typing.Tuple[int, int, int]]] = None,
+                 color_palette: typing.Optional[typing.Dict[int, typing.Tuple[int, int, int]]] = None,
                  **kwargs
                  ) -> None:
         super().__init__(**kwargs)  # super().__init__(dll_file_name="libcvopsrendering", **kwargs)
@@ -170,15 +169,16 @@ class InferenceResultRenderer(cvops.inference.c_api.CApi, contextlib.AbstractCon
         if not all(isinstance(value, str) for value in classes.values()):
             raise TypeError("Classes values (names) must be strings")
         self.classes = classes
-        self.color_palette = color_palette
-        if color_palette:
-            if not isinstance(color_palette, dict):
+        self.color_palette = color_palette  # type: ignore
+        # TODO: Move this color palette validation to a method in the image_processor module
+        if self.color_palette:
+            if not isinstance(self.color_palette, dict):
                 raise TypeError("Color palette must be a list")
-            if not all(isinstance(value, collections.abc.Sequence) for value in color_palette.values()):
+            if not all(isinstance(value, collections.abc.Sequence) for value in self.color_palette.values()):
                 raise TypeError("Color palette values must be tuples or lists")
-            if not all(len(value) == 3 for value in color_palette.values()):
+            if not all(len(value) == 3 for value in self.color_palette.values()):
                 raise ValueError("Color palette values must be tuples or lists  of length 3")
-            if not len(color_palette.keys()) == len(classes.keys()):
+            if not len(self.color_palette.keys()) == len(classes.keys()):
                 raise ValueError("Color palette must have same number of colors as classes")
         else:
             num_colors = len(classes.keys())
@@ -208,7 +208,7 @@ class InferenceResultRenderer(cvops.inference.c_api.CApi, contextlib.AbstractCon
             self._is_in_context_manager = False
             super().__exit__(exc_type, exc_value, traceback)
 
-    def render(self, inference_result_ptr: _types.c_inference_result_p, image: numpy.ndarray) -> None:
+    def render(self, inference_result_ptr: _types.c_inference_result_p, image: numpy.ndarray) -> None:  # type: ignore
         """ Renders the given inference result onto an image """
         if image is None:
             return
@@ -226,7 +226,7 @@ class InferenceResultRenderer(cvops.inference.c_api.CApi, contextlib.AbstractCon
             num_channels = image.shape[-1] if image.ndim == 3 else 1
             self.dll.render_inference_result(
                 inference_result_ptr,
-                image.ctypes._data,  # pylint: disable=protected-access
+                image.ctypes._data,  # type: ignore # pylint: disable=protected-access
                 image.shape[0],
                 image.shape[1],
                 num_channels

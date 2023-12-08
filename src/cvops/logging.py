@@ -42,7 +42,6 @@ def handle_exception(exc_type, exc_value, exc_traceback) -> None:
         logger.error("--------------------------")
     except Exception:  # pylint: disable=broad-except
         pass
-    return
 
 
 # users can override the except hook, but most analysts aren't that skilled yet.

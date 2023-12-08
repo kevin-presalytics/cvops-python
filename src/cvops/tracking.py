@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 class VideoObjectTrackerMixin(cvops.inference.manager.InferenceResultRenderer, contextlib.AbstractContextManager):
     """ Wrapper class around the calls to object tracking methods of the C API """
-    _tracker_ptr: _types.c_tracker_p
+    _tracker_ptr: _types.c_tracker_p  # type: ignore
 
     def __init__(self,
-                 color_palette: typing.Optional[typing.List[typing.Tuple[int, int, int]]] = None,
-                 classes: typing.Optional[typing.List[str]] = None,
+                 color_palette: typing.Optional[typing.Dict[int, typing.Tuple[int, int, int]]] = None,
+                 classes: typing.Optional[typing.Dict[int, str]] = None,
                  metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
                  **kwargs):
         if not classes:
@@ -28,6 +28,7 @@ class VideoObjectTrackerMixin(cvops.inference.manager.InferenceResultRenderer, c
                 if not classes:
                     raise RuntimeError("Unable to determine classes.  \
                                         Please supplier a classes keyword argument.")
+        assert isinstance(classes, list), "classes must be a list of strings"
         if not color_palette:
             color_palette = cvops.image_processor.generate_color_palette(len(classes))
 
@@ -67,7 +68,7 @@ class VideoObjectTrackerMixin(cvops.inference.manager.InferenceResultRenderer, c
 
     def update_tracker(self,
                        image: numpy.ndarray,
-                       inference_result: typing.Union[_types.c_inference_result_p,
+                       inference_result: typing.Union[_types.c_inference_result_p,  # type: ignore
                                                       cvops.schemas.InferenceResult]) -> None:
         """ Updates the tracker with the given image """
         if self._tracker_ptr is None:
@@ -83,17 +84,16 @@ class VideoObjectTrackerMixin(cvops.inference.manager.InferenceResultRenderer, c
         cv_mat = cvops.inference.factories.frame_to_cv_mat_data(image)
         self.dll.update_tracker(self._tracker_ptr, inference_result, *cv_mat)
 
-    def get_tracker_state(self) -> _types.c_tracker_state_p:
+    def get_tracker_state(self) -> _types.c_tracker_state_p:  # type: ignore
         """ Returns the state of the tracker """
         if self._tracker_ptr is None:
             raise RuntimeError("Tracker not initialized")
         tracker_state_ptr = self.dll.get_tracker_state(self._tracker_ptr)
-        if (tracker_state_ptr):
+        if tracker_state_ptr:
             return tracker_state_ptr
-        else:
-            raise RuntimeError("Unable to get tracker state")  # pylint: disable=broad-exception-raised
+        raise RuntimeError("Unable to get tracker state")  # pylint: disable=broad-exception-raised
 
-    def dispose_tracker_state(self, tracker_state_ptr: _types.c_tracker_state_p) -> None:
+    def dispose_tracker_state(self, tracker_state_ptr: _types.c_tracker_state_p) -> None:  # type: ignore
         """ Disposes the tracker state """
         if tracker_state_ptr:
             try:
@@ -101,7 +101,7 @@ class VideoObjectTrackerMixin(cvops.inference.manager.InferenceResultRenderer, c
             except BaseException:  # pylint: disable=broad-exception-caught
                 pass
 
-    def __enter__(self) -> "VideoObjectTrackerMixin":
+    def __enter__(self):  # Note: 'Self' type added in python 3.11
         try:
             super().__enter__()
             self.create_tracker()

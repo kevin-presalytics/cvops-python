@@ -13,7 +13,7 @@ class InferenceTests(unittest.TestCase):
 
     def setUp(self):
         """ Runs before the tests """
-        self.output_dir = tempfile.TemporaryDirectory()
+        self.output_dir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
         # Uncomment the line below if you want to see the output files
         # self.output_dir = tests.ROOT_DIR.joinpath("out")
 

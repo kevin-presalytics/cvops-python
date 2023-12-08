@@ -15,7 +15,7 @@ import cvops.workflows
 logger = logging.getLogger(__name__)
 
 
-class CLI(object):
+class CLI:
     """
     CVOps Command Line Interface
     --------------------------
@@ -61,7 +61,8 @@ class CLI(object):
     class DeployDescriptions:
         """Descriptions for the deploy command"""
         MODEL_FRAMEWORK = "Framework of the model to deploy.  Can be one of: [onnx, tensorflow, pytorch].  Defaults to \"onnx\""
-        TYPE = "Type of model to deploy.  Can be one of: [image-classification, object-detection, image-segmentation, chatbot].  Defaults to \"image-segmentation\""
+        TYPE = "Type of model to deploy.  Can be one of: [image-classification, object-detection, image-segmentation, chatbot]."  \
+            "Defaults to \"image-segmentation\""
         FILEPATH = "Local file path of the model file to deploy"
         DEVICE_IDS = "Device ids to deploy to.  Defaults to all devices in workspace."
         DEPLOY = """
@@ -69,6 +70,7 @@ class CLI(object):
         """
 
     class DeploySubCommands:
+        """Subcommands for the deploy command"""
         LOCAL = "local"
         YOLOV8 = "yolov8"
 
@@ -254,7 +256,7 @@ class CLI(object):
     def yolov8_deploy_handler(self, args: argparse.Namespace) -> None:  # pylint: disable=unused-argument
         """ handles the yolov8 deploy subcommand"""
         logger.info("YOLOv8 deploy")
-        cvops.workflows.deploy_YOLOv8(
+        cvops.workflows.deploy_yolo_v8(
             args.device_ids,
             args.filepath
         )

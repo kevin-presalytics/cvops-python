@@ -2,7 +2,6 @@
 import unittest
 import json
 import logging
-import ctypes
 import tests
 import cvops.video
 import cvops.tracking
@@ -12,6 +11,7 @@ import cvops.inference.factories
 
 
 logger = logging.getLogger(__name__)
+
 
 class TrackerTests(unittest.TestCase):
     """ Tests for object tracking methods through the C library """
@@ -49,7 +49,7 @@ class TrackerTests(unittest.TestCase):
         tracker_state = None
         initial_inference_result = None
 
-        class TestVideoTracker(
+        class TestVideoTracker(  # pylint: disable=too-many-ancestors
                 cvops.tracking.VideoObjectTrackerMixin,
                 cvops.inference.manager.InferenceSessionManager,
                 cvops.video.VideoPlayerBase):
@@ -99,6 +99,3 @@ class TrackerTests(unittest.TestCase):
         self.assertIsNotNone(tracker_state)
         self.assertIsNotNone(initial_inference_result)
         self.assertGreater(len(tracker_state), 0)
-
-
-        

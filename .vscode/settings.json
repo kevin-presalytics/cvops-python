@@ -10,9 +10,11 @@
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
     "python.linting.pylintEnabled": true,
-    "python.linting.mypyEnabled": true,
     "python.linting.flake8Enabled": false,
-    "python.languageServer": "Pylance",
+    "python.languageServer": "Jedi",
+    "pylint.args": ["--rcfile=./pyproject.toml"],
+    "mypy.enabled": true,
+    "mypy.configFile": "pyproject.toml",
     "cSpell.words": [
         "amax",
         "argmax",

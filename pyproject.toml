@@ -57,6 +57,7 @@ bootstrap = "tools:bootstrap_cmake"
 run_tests = "tools:run_tests"
 install_hooks = "tools:install_hooks"
 clean = "tools:clean"
+lint = "tools:lint"
 
 
 [project.urls]
@@ -64,19 +65,46 @@ clean = "tools:clean"
 "Bug Tracker" = 'https://github.com/cvops/cvops-python/issues'
 
 [tool.mypy]
-python_version = '3.8'
+python_version = '3.10'
 warn_unused_configs = true
 warn_return_any = true
 ignore_missing_imports = true
+exclude = [
+  "cvops-inference",
+  "build",
+  "dist",
+  "venv",
+  "__pycache__"
+]
+disable_error_code = ["no-any-return"]
+
+[tool.pylint]
+ignore = [
+  "cvops-inference"
+]
 
 [tool.pylint.typecheck]
 generated-members = ["torch.*", "numpy.*", "onnx.*", "cv2.*", "cvops.*"]
 
 [tool.pylint.'MESSAGES CONTROL']
-max-line-length = 120
+max-line-length = 160
+disable = [
+  "W0511", # TODO
+  "R0401", # Cyclic import
+  "R0801", # Similar lines in files
+  "R0901",
+  "R0903", # Too few public methods
+  "R0902", # Too many instance attributes
+  "R0904", # Too many public methods
+  "R0911", # Too many return statements
+  "R0912", # Too many branches
+  "R0913", # Too many arguments
+  "R0914", # Too many local variables
+  "R0915", # Too many statements
+]
 
 [tool.autopep8]
-max_line_length = 120
+max_line_length = 160
 in-place = true
 recursive = true
 aggressive = 3

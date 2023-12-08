@@ -3,11 +3,7 @@ import pathlib
 import typing
 import os
 import logging
-import http
 import requests
-import onnx
-import numpy
-import cv2
 import cvops.schemas
 
 
@@ -38,7 +34,7 @@ def upload_file(
 ) -> None:
     """ Upload a local file to a url.  Defaults to PUT http method"""
     try:
-        files = [(file_path.name, open(file_path, 'rb'))]
+        files = [(file_path.name, open(file_path, 'rb'))]  # pylint: disable=consider-using-with
         if method == "PUT":
             resp = requests.put(url, files=files, timeout=upload_timeout)
         else:
@@ -66,14 +62,12 @@ def export_to_onnx(
             if not isinstance(platform, cvops.schemas.ModelPlatforms):
                 platform = cvops.schemas.ModelPlatforms(platform)
             if platform == cvops.schemas.ModelPlatforms.YOLO:
-                from ultralytics import YOLO
+                from ultralytics import YOLO  # pylint: disable=import-outside-toplevel
                 model = YOLO(path)
                 output_path = model.export(format='onnx', **export_args)
                 return pathlib.Path(output_path)
-            else:
-                raise NotImplementedError("Only YOLOv8 is currently supported for export")
-        else:
             raise NotImplementedError("Only YOLOv8 is currently supported for export")
+        raise NotImplementedError("Only YOLOv8 is currently supported for export")
     except ImportError:
         logger.error(
             "Unable to import required dependencies for model export.  Please install ultralytics and torch to export YOLOv8 models")

@@ -1,4 +1,4 @@
-#  Factories to generate schemas objects from C types
+""" Factories to generate schemas objects from C types """
 import typing
 import ctypes
 import pathlib
@@ -13,7 +13,7 @@ def inference_result_from_c_type(c_inference_result: _types.InferenceResult) -> 
     """ Converts an InferenceResult from the C library to a serializable type to send over the data topic """
     if c_inference_result is None:
         raise ValueError("Inference result cannot be None")
-    elif isinstance(c_inference_result, _types.c_inference_result_p) or isinstance(c_inference_result, ctypes.POINTER(_types.InferenceResult)):
+    if isinstance(c_inference_result, (_types.c_inference_result_p, ctypes.POINTER(_types.InferenceResult))):
         c_inference_result = c_inference_result.contents
     if not isinstance(c_inference_result, _types.InferenceResult):
         raise TypeError()
@@ -50,18 +50,22 @@ def inference_result_from_c_type(c_inference_result: _types.InferenceResult) -> 
 def inference_result_to_c_type(inference_result: cvops.schemas.InferenceResult) -> _types.InferenceResult:
     """ Converts a cvops.schemas.InferenceResult to a C type for rendering"""
     boxes_list = []
-    for box in inference_result.boxes:
-        c_box = _types.Box(
-            height=ctypes.c_int(box.height),
-            width=ctypes.c_int(box.width),
-            x=ctypes.c_int(box.x),
-            y=ctypes.c_int(box.y),
-            class_id=ctypes.c_int(box.class_id),
-            class_name=ctypes.c_char_p(box.class_name.encode('utf-8')),
-            object_id=ctypes.c_int(box.object_id),
-            confidence=ctypes.c_float(box.confidence)
-        )
-        boxes_list.append(c_box)
+    if inference_result.boxes is None:
+        inference_result.boxes = []
+    else:
+        for box in inference_result.boxes:
+            assert isinstance(box, cvops.schemas.Box)
+            c_box = _types.Box(
+                height=ctypes.c_int(box.height),
+                width=ctypes.c_int(box.width),
+                x=ctypes.c_int(box.x),
+                y=ctypes.c_int(box.y),
+                class_id=ctypes.c_int(box.class_id),
+                class_name=ctypes.c_char_p(box.class_name.encode('utf-8')),
+                object_id=ctypes.c_int(box.object_id),
+                confidence=ctypes.c_float(box.confidence)
+            )
+            boxes_list.append(c_box)
     c_inference_result = _types.InferenceResult(
         boxes=(_types.Box * len(inference_result.boxes))(*boxes_list),
         boxes_count=ctypes.c_int(len(inference_result.boxes)),
@@ -74,7 +78,7 @@ def inference_result_to_c_type(inference_result: cvops.schemas.InferenceResult) 
     return c_inference_result
 
 
-def inference_result_to_c_type_ptr(inference_result: cvops.schemas.InferenceResult) -> _types.c_inference_result_p:
+def inference_result_to_c_type_ptr(inference_result: cvops.schemas.InferenceResult) -> _types.c_inference_result_p:  # type: ignore[valid-type]
     """ Converts a cvops.schemas.InferenceResult to a C type for rendering"""
     c_inference_result = inference_result_to_c_type(inference_result)
     return ctypes.pointer(c_inference_result)
@@ -82,10 +86,10 @@ def inference_result_to_c_type_ptr(inference_result: cvops.schemas.InferenceResu
 
 def get_c_model_platform(model_platform: cvops.schemas.ModelPlatforms) -> ctypes.c_int:
     """ Returns the C representation of the model Framework """
-    model_platform = _types.MODEL_PLATFORM_C_MAP.get(model_platform, None)
+    model_platform: int = _types.MODEL_PLATFORM_C_MAP.get(model_platform, None)  # type: ignore
     if model_platform is None:
         raise Exception("Invalid model platform")  # pylint: disable=broad-exception-raised
-    return ctypes.c_int(model_platform)
+    return ctypes.c_int(model_platform)  # type: ignore
 
 
 def create_inference_session_request(
@@ -112,19 +116,21 @@ def create_inference_session_request(
     return request
 
 
-def tracker_state_ptr_to_boxes(tracker_state: _types.c_tracker_state_p) -> typing.List[cvops.schemas.Box]:
+def tracker_state_ptr_to_boxes(tracker_state: _types.c_tracker_state_p) -> typing.List[cvops.schemas.Box]:  # type: ignore[valid-type]
     """ Converts a tracker state to a list of boxes """
+    assert hasattr(tracker_state, "contents"), "Tracker State is not a ctypes pointer"  # pylint: disable=no-member
+    inference_result: _types.InferenceResult = tracker_state.contents  # type: ignore
     boxes = []
-    for i in range(0, tracker_state.contents.boxes_count):
+    for i in range(0, inference_result.boxes_count):
         next_box = cvops.schemas.Box(
-            height=tracker_state.contents.boxes[i].height,
-            width=tracker_state.contents.boxes[i].width,
-            x=tracker_state.contents.boxes[i].x,
-            y=tracker_state.contents.boxes[i].y,
-            class_id=tracker_state.contents.boxes[i].class_id,
-            class_name=tracker_state.contents.boxes[i].class_name,
-            object_id=tracker_state.contents.boxes[i].object_id,
-            confidence=tracker_state.contents.boxes[i].confidence
+            height=inference_result.boxes[i].height,
+            width=inference_result.boxes[i].width,
+            x=inference_result.boxes[i].x,
+            y=inference_result.boxes[i].y,
+            class_id=inference_result.boxes[i].class_id,
+            class_name=inference_result.boxes[i].class_name,
+            object_id=inference_result.boxes[i].object_id,
+            confidence=inference_result.boxes[i].confidence
         )
         boxes.append(next_box)
     return boxes
@@ -133,4 +139,4 @@ def tracker_state_ptr_to_boxes(tracker_state: _types.c_tracker_state_p) -> typin
 def frame_to_cv_mat_data(frame: numpy.ndarray) -> typing.Tuple[ctypes.c_void_p, int, int, int]:
     """ Converts an image into values that can be passed to the cv::Mat constructor in the C Library """
     num_channels = frame.shape[-1] if frame.ndim == 3 else 1
-    return (frame.ctypes._data, frame.shape[0], frame.shape[1], num_channels)  # pylint: disable=protected-access
+    return (frame.ctypes._data, frame.shape[0], frame.shape[1], num_channels)  # type: ignore # pylint: disable=protected-access

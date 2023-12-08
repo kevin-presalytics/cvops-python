@@ -58,7 +58,7 @@ YOLO_SEGMENT_URL = "https://github.com/ultralytics/assets/releases/download/v0.0
 YOLO_OBJECT_DETECTION_URL = "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.pt"
 
 
-def deploy_YOLOv8(
+def deploy_yolo_v8(
     device_ids: typing.Optional[typing.List[str]] = None,
     path: typing.Optional[typing.Union[str, pathlib.Path]] = None,
     **kwargs
@@ -88,31 +88,31 @@ def deploy_onnx_model(
         file_path = cvops.util.download_file(path)
     deploy_model_to_devices(file_path, model_type, cvops.schemas.ModelFrameworks.ONNX, device_ids, **kwargs)
 
+# TODO: Add back Accelerated image processor
+# def test_onnx_inference(
+#     model_path: typing.Union[str, pathlib.Path],
+#     image_path: typing.Union[str, pathlib.Path],
+#     model_platform: typing.Union[str, cvops.schemas.ModelPlatforms] = cvops.schemas.ModelPlatforms.YOLO,
+#     metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
+# ) -> None:
+#     """ Tests an onnx model by running inference on a local image"""
+#     if isinstance(model_path, str):
+#         model_path = pathlib.Path(model_path)
+#     if isinstance(model_platform, str):
+#         model_platform = cvops.schemas.ModelPlatforms(model_platform)
+#     if isinstance(image_path, str):
+#         image_path = pathlib.Path(image_path)
 
-def test_onnx_inference(
-    model_path: typing.Union[str, pathlib.Path],
-    image_path: typing.Union[str, pathlib.Path],
-    model_platform: typing.Union[str, cvops.schemas.ModelPlatforms] = cvops.schemas.ModelPlatforms.YOLO,
-    metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
-) -> None:
-    """ Tests an onnx model by running inference on a local image"""
-    if isinstance(model_path, str):
-        model_path = pathlib.Path(model_path)
-    if isinstance(model_platform, str):
-        model_platform = cvops.schemas.ModelPlatforms(model_platform)
-    if isinstance(image_path, str):
-        image_path = pathlib.Path(image_path)
+#     args = {
+#         "model_platform": model_platform,
+#         "model_path": model_path,
+#         "metadata": metadata,
+#     }
 
-    args = {
-        "model_platform": model_platform,
-        "model_path": model_path,
-        "metadata": metadata,
-    }
-
-    with cvops.image_processor.AcceleratedImageProcessor(**args) as image_processor:
-        inference_result = image_processor.run(image_path)
-        output_path = pathlib.Path(os.getcwd(), "inference_result.png")
-        image_processor.visualize_inference(inference_result, output_path)
+#     with cvops.image_processor.AcceleratedImageProcessor(**args) as image_processor:
+#         inference_result = image_processor.run(image_path)
+#         output_path = pathlib.Path(os.getcwd(), "inference_result.png")
+#         image_processor.visualize_inference(inference_result, output_path)
 
 
 def run_inference_on_directory(
@@ -122,7 +122,7 @@ def run_inference_on_directory(
     output_directory: typing.Optional[typing.Union[str, pathlib.Path, tempfile.TemporaryDirectory]] = None,
     metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
     metadata_path: typing.Optional[typing.Union[str, pathlib.Path]] = None,
-    color_palette: typing.Optional[typing.List[typing.Tuple[int, int, int]]] = None,
+    color_palette: typing.Optional[typing.Dict[int, typing.Tuple[int, int, int]]] = None,
     confidence_threshold: float = 0.5,
     iou_threshold: float = 0.4
 ) -> typing.List[cvops.schemas.InferenceResult]:

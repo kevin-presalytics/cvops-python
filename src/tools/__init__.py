@@ -51,6 +51,7 @@ CMAKE_CLEAN_COMMAND = [
     "clean",
 ]
 
+
 def clean_cmake():
     """Cleans the cmake build directory"""
     try:
@@ -67,7 +68,7 @@ def bootstrap_cmake():
     try:
         subprocess.run(CMAKE_CONFIGURE_COMMAND, cwd=C_SOURCE_DIR, check=True)
         subprocess.run(CMAKE_BUILD_COMMAND, cwd=C_SOURCE_DIR, check=True)
-    except FileNotFoundError as f_err:
+    except FileNotFoundError:
         message = "Invalid path to C library source directory.  Did you install the project in editable mode using `pip install -e .[dev]`?"
         logger.error(message)
         sys.exit(1)
@@ -91,6 +92,7 @@ def bootstrap_cmake():
     # except Exception as ex:
     #     logger.exception(ex, "Unable to copy C library")
     #     sys.exit(1)
+
 
 def run_tests():
     """ Runs all tests """
@@ -124,7 +126,21 @@ def install_hooks():
     """ Installs the pre-commit hooks """
     install_pre_commit_hooks()
 
+
 def clean():
     """ Cleans the build directories """
     clean_cmake()
 
+
+def lint():
+    """ Runs the linter """
+    try:
+        subprocess.run(["./venv/bin/python3", "-m", "pylint", "src"], cwd=ROOT_DIR, check=True, env={"PYTHONPATH": "./src"})
+        subprocess.run(["./venv/bin/python3", "-m", "mypy", "src"], cwd=ROOT_DIR, check=True)
+    except subprocess.CalledProcessError as err:
+        logger.error(err.stderr)
+        sys.exit(1)
+    except Exception as ex:  # pylint: disable=broad-except
+        logger.exception(ex, "Unable to run linter")
+        sys.exit(1)
+    logger.info("Linting complete")

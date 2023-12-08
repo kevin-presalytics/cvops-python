@@ -1,4 +1,4 @@
-# Loader classes to load the C library
+""" Loader classes to load the C library """
 import os
 import logging
 import pathlib
@@ -11,18 +11,18 @@ import cvops.config
 logger = logging.getLogger(__name__)
 
 # One instance of the C library dll per process
-__instances__: typing.Optional[typing.Dict[int, ctypes.CDLL]] = {}
+__instances__: typing.Dict[int, ctypes.CDLL] = {}
 
 
 def get_dll_instance() -> typing.Optional[ctypes.CDLL]:
     """ Returns the C Library dll singleton """
-    pid = os.getpid()
+    pid: int = os.getpid()
     if pid not in __instances__:
         return None
     return __instances__[pid]
 
 
-class DllLoader(object):
+class DllLoader:
     """ Loads the C library """
 
     DEFAULT_DLL_FILE_NAME = "libcvops"
@@ -36,11 +36,11 @@ class DllLoader(object):
     pid: int
     dll_file_name: str
 
-    def __init__(
-            self,
-            debug: typing.Optional[bool] = None,
-            dll_file_name: typing.Optional[str] = None,
-            **kwargs) -> None:
+    def __init__(self,
+                 debug: typing.Optional[bool] = None,
+                 dll_file_name: typing.Optional[str] = None,
+                 **kwargs  # pylint: disable=unused-argument
+                 ) -> None:
         if debug is None:
             self.debug = cvops.config.SETTINGS.debug
         else:
@@ -70,7 +70,7 @@ class DllLoader(object):
     def load(self) -> bool:
         """ Loads the dll, return bool indicating if the dll was loaded.  False indicates the dll was already loaded """
         if self.dll is None:
-            self.dll = ctypes.cdll.LoadLibrary(self.dll_path)
+            self.dll = ctypes.cdll.LoadLibrary(str(self.dll_path))
             if self.debug:
                 logger.debug("DLL loaded in process: %s", os.getpid())
                 # Note: Set breakpoints here to debug the c lbirary by attaching to the process
@@ -82,39 +82,35 @@ class DllLoader(object):
         """ Returns dll's file extension based on the system """
         if self.system == "Windows":
             return ".dll"
-        elif self.system == "Linux":
+        if self.system == "Linux":
             return ".so"
-        elif self.system == "Darwin":
+        if self.system == "Darwin":
             return ".dylib"
-        else:
-            raise RuntimeError("Unsupported system")
+        raise RuntimeError("Unsupported system")
 
-    def check_compatbility(self):
+    def check_compatbility(self):  # python: disable=R0911
+        """ Checks if the system and processor are supported by this library"""
         if self.system == "Windows":
             if self.processor == "AMD64":
                 return False  # TODO: Add support for Windows
-            else:
-                return False
-        elif self.system == "Linux":
+            return False
+        if self.system == "Linux":
             if self.processor == "x86_64":
                 return True
-            elif self.processor == "aarch64":
+            if self.processor == "aarch64":
                 return False  # TODO: Add support for Linux ARM
-            else:
-                return False
-        elif self.system == "Darwin":  # TODO: Add support for MacOS
+            return False
+        if self.system == "Darwin":  # TODO: Add support for MacOS
             if self.processor == "x86_64":
                 return False
-            else:
-                return False
-        else:
-            raise Exception(f"Unsupported system: System: {self.system}, Processor: {self.processor}")
+            return False
+        raise Exception(f"Unsupported system: System: {self.system}, Processor: {self.processor}")  # pylint: disable=W0719
 
     def get_dll_path(self):
+        """ Returns the path to the dll"""
         if self.check_compatbility():
             dll_path = self.library_path.joinpath(self.dll_file_name + self.get_file_extension())
             if not dll_path.exists():
-                raise Exception(f"Unable to find dll: {dll_path}")
+                raise Exception(f"Unable to find dll: {dll_path}")  # pylint: disable=W0719
             return dll_path
-        else:
-            raise Exception(f"Unsupported system: System: {self.system}, Processor: {self.processor}")
+        raise Exception(f"Unsupported system: System: {self.system}, Processor: {self.processor}")  # pylint: disable=W0719
