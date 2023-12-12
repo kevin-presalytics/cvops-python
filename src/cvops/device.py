@@ -194,7 +194,7 @@ class DeviceManager(cvops.events.EventManager):
                         raise TimeoutError("Timeout waiting for device details")
         except KeyError as err:
             raise ValueError(
-                f"Invalid watch dictionary. Key \"{key}\" does not exist on DeviceManager") from err # pylint: disable=raise-missing-from
+                f"Invalid watch dictionary. Key \"{key}\" does not exist on DeviceManager") from err  # pylint: disable=raise-missing-from
 
     def handle_workspace_details_response(self, event: cvops.events.WorkspaceDetailsResponseEvent):
         """ Handles the workspace details response from the MQTT Broker"""
