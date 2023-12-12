@@ -49,6 +49,9 @@ jobs:
     name: Build Dockerfile
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -68,7 +71,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ghcr.io/kevin-presalytics/cvops-python:${{ steps.get-short-sha.outputs.short-sha }}
+          tags: ghcr.io/kevin-presalytics/cvops-python:latest
 
         
 
