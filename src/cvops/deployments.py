@@ -24,7 +24,7 @@ class DeploymentSession(pydantic.BaseModel):
     is_active: bool = True
 
 
-class DeploymentManager(object):
+class DeploymentManager(cvops.schemas.CooperativeBaseClass):
     """ Manager for deployments of AI Models to CVOps devices. """
     session: typing.Optional[DeploymentSession]
     device_manager: 'cvops.device.DeviceManager'
@@ -35,7 +35,6 @@ class DeploymentManager(object):
 
     def __init__(self,
                  device_manager: typing.Optional['cvops.device.DeviceManager'] = None,
-                 create_session: bool = True,
                  wait_for_completion: bool = True,
                  deployment_timeout: typing.Optional[float] = None,
                  **kwargs) -> None:

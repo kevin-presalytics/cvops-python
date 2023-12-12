@@ -14,6 +14,13 @@ def now():
     return datetime.datetime.now(datetime.timezone.utc)
 
 
+class CooperativeBaseClass(abc.ABC):
+    """ Base class to facilitate cooperative inheritance """
+
+    def __init__(self, **kwargs):  # pylint: disable=unused-argument
+        super().__init__()
+
+
 class LowerCaseEnum(enum.Enum):
     """ Base Class for Enums with greedy parsing of strings into enums """
 
@@ -23,6 +30,7 @@ class LowerCaseEnum(enum.Enum):
         for member in cls:
             if str(member.value).lower() == value:
                 return member
+        raise ValueError(f"{value} is not a valid {cls.__name__}")
 
 
 class EditorTypes(LowerCaseEnum):
@@ -269,7 +277,6 @@ class Label(pydantic.BaseModel):
 class InferenceResult(TimeSeriesEntity):
     """ DTO for inference results"""
     model_config = pydantic.ConfigDict(alias_generator=pydantic.alias_generators.to_camel, populate_by_name=True)
-    boxes: typing.List[typing.Dict[str, typing.Any]] = []
     workspace_id: typing.Optional[str] = None
     device_id: str = cvops.config.SETTINGS.device_id
     result_type: InferenceResultTypes = InferenceResultTypes.BOXES
@@ -277,3 +284,15 @@ class InferenceResult(TimeSeriesEntity):
     meshes: typing.Optional[typing.Sequence] = []
     labels: typing.Optional[typing.Sequence] = []
     milliseconds: float = 0.0
+
+
+class TrackingAlgorithmTypes(LowerCaseEnum):
+    """ Enum for the type of object tracking algorithm """
+    BOOSTING = "boosting"
+    MIL = "mil"
+    KCF = "kcf"
+    TLD = "tld"
+    MEDIANFLOW = "medianflow"
+    GOTURN = "goturn"
+    MOSSE = "mosse"
+    CSRT = "csrt"

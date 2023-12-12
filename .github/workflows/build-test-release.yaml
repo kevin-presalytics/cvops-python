@@ -1,0 +1,49 @@
+
+name: Build, Test, Release
+on: [pull_request]
+jobs:
+  lint:
+    name: Lint Python
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install Virtual Environment
+        uses: ./.github/actions/install_virtualenv
+        with:
+          python-version: "3.10"
+      - name: Run linter
+        run: |
+          source venv/bin/activate
+          lint
+
+  test:
+    name: Test Python
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Instal Ninja Build System
+        uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Install Virtual Environment
+        uses: ./.github/actions/install_virtualenv
+        with:
+          python-version: "3.10"
+      - name: Cache C Library Build Output
+        uses: actions/cache@v3
+        with:
+          path: ./cvops-inference/build
+          key: ${{ runner.os }}-build-${{ hashFiles('**/CMakeLists.txt') }}
+      # - name: Build C Library
+      #   run: |
+      #     source venv/bin/activate
+      #     update_submodules
+      #     bootstrap
+      # - name: Run tests
+      #   run: |
+      #     source venv/bin/activate
+      #     run_tests
+
+        
+

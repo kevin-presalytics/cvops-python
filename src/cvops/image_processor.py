@@ -55,9 +55,9 @@ def generate_color_palette(num_colors: int) -> typing.Dict[int, typing.Tuple[int
     """ Generates a color palette with the given number of colors """
     color_palette = {}
     for i in range(num_colors):
-        colors = tuple([int(x) for x in numpy.random.randint(0, 255, size=3)])
+        colors = tuple([int(x) for x in numpy.random.randint(0, 255, size=3)])  # pylint: disable=consider-using-generator
         color_palette[i] = colors
-    return color_palette
+    return color_palette  # type: ignore
 
 
 def extract_image(image: typing.Union[str, pathlib.Path, io.BytesIO, bytes],
@@ -77,10 +77,10 @@ def extract_image(image: typing.Union[str, pathlib.Path, io.BytesIO, bytes],
             new_image = cv2.imread(image)
     elif isinstance(image, pathlib.Path):
         new_image = cv2.imread(str(image))
-    elif isinstance(image, io.BytesIO) or isinstance(image, bytes):
+    elif isinstance(image, (io.BytesIO, bytes)):
         image_stream = image
         if isinstance(image_stream, bytes):
-            image_stream = io.BytesIO(image)
+            image_stream = io.BytesIO(image)  # type: ignore
         new_image = cv2.imdecode(numpy.frombuffer(image_stream.read(), numpy.uint8), 1)
     else:
         raise TypeError(f"The type ${image.__class__.__name__} is not support for reading")
@@ -93,19 +93,17 @@ def image_to_bytes(image: typing.Union[numpy.ndarray, str, pathlib.Path, io.Byte
     """ Returns the bytes of the image """
     if isinstance(image, io.BytesIO):
         return image.read()
-    elif isinstance(image, str):
+    if isinstance(image, str):
         if image.startswith("http"):
             return requests.get(image, timeout=60).content
-        else:
-            if not os.path.exists(image):
-                raise ValueError(f"The path to image ${image} does not exist.")
-            return open(image, "rb").read()
-    elif isinstance(image, pathlib.Path):
+        if not os.path.exists(image):
+            raise ValueError(f"The path to image ${image} does not exist.")
+        return open(image, "rb").read()
+    if isinstance(image, pathlib.Path):
         return open(str(image), "rb").read()
-    elif isinstance(image, numpy.ndarray):
+    if isinstance(image, numpy.ndarray):
         return cv2.imencode('.png', image)[1].tobytes()
-    else:
-        raise TypeError(f"The type ${image.__class__.__name__} is not support for reading")
+    raise TypeError(f"The type ${image.__class__.__name__} is not support for reading")
 
 
 class ImageUtilsMixIn(abc.ABC):
@@ -114,18 +112,21 @@ class ImageUtilsMixIn(abc.ABC):
     _classes: typing.Dict[int, str]
 
     def __init__(self,
-                 *args,
                  color_palette: typing.Optional[typing.Dict[int, typing.Tuple[int, int, int]]] = None,
                  classes: typing.Optional[typing.Dict[int, str]] = None,
                  metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
-                 **kwargs) -> None:
-        self._classes = classes
+                 **kwargs  # pylint: disable=unused-argument
+                 ) -> None:
+        if not metadata:
+            metadata = {}
+        self._classes = classes  # type: ignore
         if not self._classes:
             self._classes = metadata.get("classes", None)
-        self._color_palette = color_palette
+        self._color_palette = color_palette  # type: ignore
         if not self._color_palette:
             if metadata.get("color_palette", None):
-                self._color_palette = metadata.get("color_palette")
+                # TODO: Validate the color palette
+                self._color_palette = metadata.get("color_palette")  # type: ignore
             self._color_palette = generate_color_palette(len(self.classes))
 
     @property
@@ -133,8 +134,7 @@ class ImageUtilsMixIn(abc.ABC):
         """ Returns id, label key-value pairs of the classes for the model """
         if self._classes:
             return self._classes
-        else:
-            return {}
+        return {}
 
     @property
     def color_palette(self) -> typing.Dict[int, typing.Tuple[int, int, int]]:
@@ -144,8 +144,7 @@ class ImageUtilsMixIn(abc.ABC):
                 raise ValueError(
                     "Color palette wrong shape: The number of colors in the color palette does not match the number of classes")
             return self._color_palette
-        else:
-            raise RuntimeError("Color palette not defined")  # pylint: disable
+        raise RuntimeError("Color palette not defined")  # pylint: disable
 
     def draw_detections(self, img, box, score, class_id):
         """
@@ -210,19 +209,16 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
     onnx_session: onnxruntime.InferenceSession
     confidence_threshold: float
     iou_threshold: float
-    _classes: typing.Optional[typing.Dict[int, str]]
 
     def __init__(self,
                  model_platform: cvops.schemas.ModelPlatforms,
                  model_path: pathlib.Path,
-                 *args,
                  confidence_threshold: float = 0.5,
                  iou_threshold: float = 0.5,
                  classes: typing.Optional[typing.Dict[int, str]] = None,
                  metadata: typing.Optional[typing.Dict[str, typing.Any]] = None,
                  **kwargs) -> None:
         super().__init__(
-            *args,
             model_platform=model_platform,
             model_path=model_path,
             confidence_threshold=confidence_threshold,
@@ -241,12 +237,13 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
     def __enter__(self):
         try:
             self.onnx_session = onnxruntime.InferenceSession(str(self.model_path))
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.execption(e)
 
     def __exit__(self, exc_type, exc_value, traceback):
         try:
             self.onnx_session.close()
+            self.onnx_session = None
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 
@@ -275,9 +272,9 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
         """ Map of class_id to class_name """
         if self._classes:
             return self._classes
-        return ast.literal_eval(self.onnx_session._model_meta.custom_metadata_map['names'])
+        return ast.literal_eval(self.onnx_session._model_meta.custom_metadata_map['names'])  # pylint: disable=protected-access
 
-    def run(self, image: typing.Union[str, pathlib.Path, io.BytesIO]):
+    def run(self, image: typing.Union[str, pathlib.Path, io.BytesIO, bytes]):  # type: ignore
         img = self.extract_image_to_array(image)
         input_data = self.preprocess_image(img)
         output_data = self.onnx_session.run(self.output_names, {self.input_name: input_data})
@@ -285,8 +282,6 @@ class LocalImageProcessor(ImageProcessorBase, ImageUtilsMixIn):
 
     def preprocess_image(self, img: numpy.ndarray) -> numpy.ndarray:
         """ Converts an image to a numpy array for model input"""
-        # Get the height and width of the input image
-        img_height, img_width = img.shape[:2]
 
         # Convert the image color space from BGR to RGB
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

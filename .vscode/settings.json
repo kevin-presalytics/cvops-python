@@ -6,11 +6,15 @@
         "-p",
         "test_*.py"
     ],
+    "python.linting.enabled": true,
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
     "python.linting.pylintEnabled": true,
-    "python.linting.mypyEnabled": true,
-    "python.languageServer": "None",
+    "python.linting.flake8Enabled": false,
+    "python.languageServer": "Jedi",
+    "pylint.args": ["--rcfile=./pyproject.toml"],
+    "mypy.enabled": true,
+    "mypy.configFile": "pyproject.toml",
     "cSpell.words": [
         "amax",
         "argmax",
@@ -48,8 +52,10 @@
         "venv/",
         "venv*"
     ],
-    "cmake.sourceDirectory": "/home/kevin/projects/cvez/cvops-python/cvops-inference",
+    "cmake.sourceDirectory": "${workspaceFolder}/cvops-inference",
     "cmake.autoSelectActiveFolder": false,
+    "cmake.cmakePath": "${workspaceFolder}/venv/bin/cmake",
+    "cmake.buildDirectory": "${workspaceFolder}/cvops-inference/build",
     "files.associations": {
         "stdexcept": "cpp",
         "iostream": "cpp",
@@ -111,7 +117,13 @@
         "cinttypes": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "*.ipp": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp"
     }
     
 }

@@ -2,7 +2,6 @@
 import subprocess
 import pathlib
 import shutil
-import unittest
 import sys
 import logging
 
@@ -12,9 +11,10 @@ logger = logging.getLogger(__name__)
 
 ROOT_DIR = pathlib.Path(__file__).parent.parent.parent.absolute()
 C_SOURCE_DIR = ROOT_DIR.joinpath("cvops-inference")
-C_BUILD_DIR = C_SOURCE_DIR.joinpath("build")
+C_BUILD_DIR = ROOT_DIR.joinpath("build")
 TESTS_DIR = ROOT_DIR.joinpath("src", "tests")
 PACKAGE_DIR = ROOT_DIR.joinpath("src", "cvops")
+CMAKE_EXEC = ROOT_DIR.joinpath("venv", "bin", "cmake")
 
 sys.path.insert(0, str(TESTS_DIR))
 
@@ -25,24 +25,42 @@ def update_submodules():
 
 
 CMAKE_CONFIGURE_COMMAND = [
-    "cmake",
+    str(CMAKE_EXEC),
+    "-G",
+    "Ninja",
     "--no-warn-unused-cli",
     "-DCMAKE_BUILD_TYPE:STRING=Debug",
     "-DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE",
-    "-DCMAKE_C_COMPILER:FILEPATH=/usr/bin/gcc-8",
     "-S",
-    C_SOURCE_DIR,
+    str(C_SOURCE_DIR),
     "-B",
-    C_BUILD_DIR,
-    "-G",
-    "Unix Makefiles"
+    str(C_BUILD_DIR),
 ]
 
 CMAKE_BUILD_COMMAND = [
-    "cmake",
+    str(CMAKE_EXEC),
     "--build",
-    C_BUILD_DIR,
+    str(C_BUILD_DIR),
 ]
+
+CMAKE_CLEAN_COMMAND = [
+    str(CMAKE_EXEC),
+    "--build",
+    str(C_BUILD_DIR),
+    "--target",
+    "clean",
+]
+
+
+def clean_cmake():
+    """Cleans the cmake build directory"""
+    try:
+        subprocess.run(CMAKE_CLEAN_COMMAND, cwd=C_SOURCE_DIR, check=True)
+    except FileNotFoundError as f_err:
+        message = "Invalid path to C library source directory.  Did you install the project in editable mode using `pip install -e .[dev]`?"
+        raise RuntimeError(message) from f_err
+    except Exception as ex:  # pylint: disable=broad-exception-caught
+        logger.exception(ex, "Unable to clean C library build directory")
 
 
 def bootstrap_cmake():
@@ -50,20 +68,30 @@ def bootstrap_cmake():
     try:
         subprocess.run(CMAKE_CONFIGURE_COMMAND, cwd=C_SOURCE_DIR, check=True)
         subprocess.run(CMAKE_BUILD_COMMAND, cwd=C_SOURCE_DIR, check=True)
-    except FileNotFoundError as f_err:
+    except FileNotFoundError:
         message = "Invalid path to C library source directory.  Did you install the project in editable mode using `pip install -e .[dev]`?"
-        raise RuntimeError(message) from f_err
+        logger.error(message)
+        sys.exit(1)
+    except subprocess.CalledProcessError as cp_err:
+        logger.error(cp_err.stderr)
+        sys.exit(1)
     except Exception as ex:  # pylint: disable=broad-exception-caught
         logger.exception(ex, "Unable to build C library")
+        sys.exit(1)
+    # Note: Removed copy in favor of usin the install emthod
+    # TODO: Enablle installation as a tool.
+    # try:
+    #     target_lib_dir = pathlib.Path(ROOT_DIR, "src", "cvops", "inference", "lib")
 
-    target_lib_dir = pathlib.Path(ROOT_DIR, "src", "cvops", "inference", "lib")
+    #     if not target_lib_dir.exists():
+    #         target_lib_dir.mkdir()
 
-    if not target_lib_dir.exists():
-        target_lib_dir.mkdir()
-
-    for so in C_SOURCE_DIR.glob("**/*.so*"):
-        print(f"Copying {so} to {target_lib_dir}")
-        shutil.copy(so, target_lib_dir)
+    #     for so in C_SOURCE_DIR.glob("**/*.so*"):
+    #         print(f"Copying {so} to {target_lib_dir}")
+    #         shutil.copy(so, target_lib_dir)
+    # except Exception as ex:
+    #     logger.exception(ex, "Unable to copy C library")
+    #     sys.exit(1)
 
 
 def run_tests():
@@ -97,3 +125,22 @@ def install_pre_commit_hooks():
 def install_hooks():
     """ Installs the pre-commit hooks """
     install_pre_commit_hooks()
+
+
+def clean():
+    """ Cleans the build directories """
+    clean_cmake()
+
+
+def lint():
+    """ Runs the linter """
+    try:
+        subprocess.run(["./venv/bin/python3", "-m", "pylint", "src"], cwd=ROOT_DIR, check=True, env={"PYTHONPATH": "./src"})
+        subprocess.run(["./venv/bin/python3", "-m", "mypy", "src"], cwd=ROOT_DIR, check=True)
+    except subprocess.CalledProcessError as err:
+        logger.error(err.stderr)
+        sys.exit(1)
+    except Exception as ex:  # pylint: disable=broad-except
+        logger.exception(ex, "Unable to run linter")
+        sys.exit(1)
+    logger.info("Linting complete")

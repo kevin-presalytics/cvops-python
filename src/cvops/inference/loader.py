@@ -1,4 +1,4 @@
-# Loader classes to load the C library
+""" Loader classes to load the C library """
 import os
 import logging
 import pathlib
@@ -11,19 +11,21 @@ import cvops.config
 logger = logging.getLogger(__name__)
 
 # One instance of the C library dll per process
-__instance__: typing.Optional[ctypes.CDLL] = None
+__instances__: typing.Dict[int, ctypes.CDLL] = {}
 
 
 def get_dll_instance() -> typing.Optional[ctypes.CDLL]:
     """ Returns the C Library dll singleton """
-    global __instance__  # pylint: disable=global-statement
-    return __instance__
+    pid: int = os.getpid()
+    if pid not in __instances__:
+        return None
+    return __instances__[pid]
 
 
-class DllLoader(object):
+class DllLoader:
     """ Loads the C library """
 
-    DLL_FILE_NAME = "libcvops"
+    DEFAULT_DLL_FILE_NAME = "libcvops"
 
     project_root: pathlib.Path
     library_path: pathlib.Path
@@ -32,14 +34,22 @@ class DllLoader(object):
     processor: str
     debug: bool
     pid: int
+    dll_file_name: str
 
-    def __init__(self, debug: typing.Optional[bool] = None):
+    def __init__(self,
+                 debug: typing.Optional[bool] = None,
+                 dll_file_name: typing.Optional[str] = None,
+                 **kwargs  # pylint: disable=unused-argument
+                 ) -> None:
         if debug is None:
             self.debug = cvops.config.SETTINGS.debug
+        else:
+            self.debug = debug
         self.pid = os.getpid()
         self.system = platform.system()
         self.processor = platform.processor()
         self.project_root = pathlib.Path(__file__).parent.parent.parent.parent
+        self.dll_file_name = dll_file_name or self.DEFAULT_DLL_FILE_NAME
         if self.debug:
             self.library_path = self.project_root.joinpath("cvops-inference", "build")
         else:
@@ -54,13 +64,13 @@ class DllLoader(object):
     @dll.setter
     def dll(self, value):
         """ Sets the dll object """
-        global __instance__  # pylint: disable=global-statement
-        __instance__ = value
+        pid = os.getpid()
+        __instances__[pid] = value
 
     def load(self) -> bool:
         """ Loads the dll, return bool indicating if the dll was loaded.  False indicates the dll was already loaded """
         if self.dll is None:
-            self.dll = ctypes.cdll.LoadLibrary(self.dll_path)
+            self.dll = ctypes.cdll.LoadLibrary(str(self.dll_path))
             if self.debug:
                 logger.debug("DLL loaded in process: %s", os.getpid())
                 # Note: Set breakpoints here to debug the c lbirary by attaching to the process
@@ -72,39 +82,35 @@ class DllLoader(object):
         """ Returns dll's file extension based on the system """
         if self.system == "Windows":
             return ".dll"
-        elif self.system == "Linux":
+        if self.system == "Linux":
             return ".so"
-        elif self.system == "Darwin":
+        if self.system == "Darwin":
             return ".dylib"
-        else:
-            raise RuntimeError("Unsupported system")
+        raise RuntimeError("Unsupported system")
 
-    def check_compatbility(self):
+    def check_compatbility(self):  # python: disable=R0911
+        """ Checks if the system and processor are supported by this library"""
         if self.system == "Windows":
             if self.processor == "AMD64":
                 return False  # TODO: Add support for Windows
-            else:
-                return False
-        elif self.system == "Linux":
+            return False
+        if self.system == "Linux":
             if self.processor == "x86_64":
                 return True
-            elif self.processor == "aarch64":
+            if self.processor == "aarch64":
                 return False  # TODO: Add support for Linux ARM
-            else:
-                return False
-        elif self.system == "Darwin":  # TODO: Add support for MacOS
+            return False
+        if self.system == "Darwin":  # TODO: Add support for MacOS
             if self.processor == "x86_64":
                 return False
-            else:
-                return False
-        else:
-            raise Exception(f"Unsupported system: System: {self.system}, Processor: {self.processor}")
+            return False
+        raise Exception(f"Unsupported system: System: {self.system}, Processor: {self.processor}")  # pylint: disable=W0719
 
     def get_dll_path(self):
+        """ Returns the path to the dll"""
         if self.check_compatbility():
-            dll_path = self.library_path.joinpath(self.DLL_FILE_NAME + self.get_file_extension())
+            dll_path = self.library_path.joinpath(self.dll_file_name + self.get_file_extension())
             if not dll_path.exists():
-                raise Exception(f"Unable to find dll: {dll_path}")
+                raise Exception(f"Unable to find dll: {dll_path}")  # pylint: disable=W0719
             return dll_path
-        else:
-            raise Exception(f"Unsupported system: System: {self.system}, Processor: {self.processor}")
+        raise Exception(f"Unsupported system: System: {self.system}, Processor: {self.processor}")  # pylint: disable=W0719

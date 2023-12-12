@@ -33,10 +33,11 @@ class LocalVideoTests(unittest.TestCase):
             "model_path": self.c_test_files_dir.joinpath("models", "yolov8n.onnx"),
             "metadata": metadata,
             "model_platform": cvops.schemas.ModelPlatforms.YOLO,
-            "confidence_threshold": 0.5,
-            "iou_threshold": 0.4,
+            "confidence_threshold": 0.05,
+            "iou_threshold": 0.3,
             "show_video": True,
             "debug": True,
+            "num_inference_processes": 3
         }
 
         with cvops.video.LocalModelVideoPlayer(**video_player_args) as video_player:

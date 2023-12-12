@@ -11,6 +11,7 @@ from enum import Enum
 import paho.mqtt.client as mqtt
 from paho.mqtt.packettypes import PacketTypes
 from cvops.config import SETTINGS
+import cvops.schemas
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class ConnectionResultCodes(Enum):
     CONNACK_REFUSED_NOT_AUTHORIZED = 5
 
 
-class MqttMessage(object):
+class MqttMessage:
     """Wrapper for MQTT Messages"""
     topic: str
     payload: str
@@ -65,7 +66,7 @@ class MqttMessage(object):
         return json.loads(self.payload)  # type: ignore
 
 
-class CallbackSignal(object):
+class CallbackSignal:
     """ Helper class to signal completion of an message callback"""
     event: threading.Event
     timeout: typing.Optional[float]
@@ -85,7 +86,7 @@ class CallbackSignal(object):
         self.event.set()
 
 
-class MqttManager(object):
+class MqttManager(cvops.schemas.CooperativeBaseClass):
     """Wrapper for MQTT Client
     """
     client: mqtt.Client

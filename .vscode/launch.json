@@ -4,28 +4,14 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
-            "name": "C++ Lib Attach (gdb)",
-            "type": "cppdbg",
-            "request": "attach",
+            // Requires the CodeLLDB extension: https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb&ssr=false#review-details
+            "name": "C++ Lib Attach (LLDB)",
+            "type": "lldb",
             "program": "${workspaceFolder}/venv/bin/python",
-            "processId": "${command:pickProcess}",
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ]
+            "pid": "${command:pickMyProcess}",
+            "request": "attach",
         },
-
         {
             "name": "Debug CLI",
             "type": "python",
@@ -49,20 +35,17 @@
             "preLaunchTask": "build-c-library"
         },
         {
-            "name": "Debug Tests",
+            "name": "Debug A Test",
             "type": "python",
             "request": "launch",
             "module": "unittest",
             "args": [
-                "discover",
-                "-v",
-                "-s",
-                "./src/tests",
-                "-p",
-                "test_*.py",
-                "-t",
-                "./src"
+                "tests.test_tracker"  // <-- Test name here
             ],
+            "env": {
+                "PYTHONPATH": "./src",
+                "DEBUG": "True"
+            },
             "justMyCode": true
         },
         {

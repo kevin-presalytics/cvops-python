@@ -121,7 +121,7 @@ class EventManager(cvops.mqtt.MqttManager):
         """ Sets an event callback for the specified event type.  Returns the callback index. """
         if isinstance(event_type, str):
             event_type = cvops.events.EventTypes(event_type)
-        max_index = max([x.index for x in self._callbacks]) if self._callbacks else 0
+        max_index = max([x.index for x in self._callbacks]) if self._callbacks else 0  # pylint: disable=consider-using-generator
         wrapper = EventCallbackWrapper(
             index=max_index + 1,
             callback=callback,

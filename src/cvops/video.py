@@ -4,7 +4,6 @@ import typing
 import pathlib
 import os
 import time
-import threading
 import queue
 import multiprocessing
 import multiprocessing.queues
@@ -14,6 +13,7 @@ import numpy
 import cvops
 import cvops.config
 import cvops.schemas
+import cvops.image_processor
 import cvops.inference.manager
 import cvops.inference.factories
 
@@ -21,7 +21,7 @@ import cvops.inference.factories
 logger = logging.getLogger(__name__)
 
 
-class VideoPlayerBase(abc.ABC):
+class VideoPlayerBase(cvops.schemas.CooperativeBaseClass):
     """ Base class for video players """
     video_source: str
     show_video: bool
@@ -30,11 +30,11 @@ class VideoPlayerBase(abc.ABC):
     limit_fps: bool
 
     def __init__(self,
-                 video_source: typing.Union[str, pathlib.Path],
+                 video_source: typing.Union[str, pathlib.Path] = "0",
                  show_video: bool = True,
                  limit_fps: bool = True,
                  **kwargs) -> None:
-        super().__init__()
+        super().__init__(**kwargs)
         if isinstance(video_source, pathlib.Path):
             video_source = str(video_source)
         self.video_source = video_source
@@ -44,13 +44,13 @@ class VideoPlayerBase(abc.ABC):
         self.limit_fps = limit_fps
 
         # Get openCV version
-        (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
+        (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')  # type: ignore[attr-defined] # pylint: disable=no-member, unused-variable
 
         # With webcam get(CV_CAP_PROP_FPS) does not work.
         # Let's see for ourselves.
 
         if int(major_ver) < 3:
-            self.fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)
+            self.fps = self.cap.get(cv2.cv.CV_CAP_PROP_FPS)  # type: ignore[attr-defined]
         else:
             self.fps = self.cap.get(cv2.CAP_PROP_FPS)
 
@@ -74,6 +74,8 @@ class VideoPlayerBase(abc.ABC):
         """ Plays the video continuously at the video fps"""
         prev = time.time()
         for image in self.image_stream:
+            if image is None:
+                self.stop()
             if self.limit_fps:
                 time_elapsed = time.time() - prev
                 while time_elapsed < 1 / self.fps:
@@ -86,10 +88,9 @@ class VideoPlayerBase(abc.ABC):
                     self.stop()
 
     def stream(self) -> None:
-        """ Returns a generator that yields images from the video """
+        """ Play the video as a stream"""
         for image in self.image_stream:
-            image = self.process_frame(image)
-            yield image
+            self.process_frame(image)
 
     def stop(self) -> None:
         """ Stops the video """
@@ -106,94 +107,8 @@ class VideoPlayerBase(abc.ABC):
     def __del__(self) -> None:
         try:
             self.stop()
-        except BaseException:  # pylint: disable=bare-except
+        except BaseException:  # pylint: disable=broad-exception-caught
             pass
-
-
-class InferenceThread(threading.Thread):
-    """ Moves inference into a subprocess to let Video Player classes avoid binding """
-    model_path: pathlib.Path
-    request_queue: queue.Queue
-    result_queue: queue.Queue
-    debug: bool
-    model_platform: cvops.schemas.ModelPlatforms
-    confidence_threshold: float
-    iou_threshold: float
-    metadata: typing.Dict[str, typing.Any]
-
-    def __init__(self,
-                 model_path: pathlib.Path,
-                 request_queue: "queue.Queue[numpy.ndarray]",
-                 result_queue: "queue.Queue[cvops.schemas.InferenceResult]",
-                 model_platform: cvops.schemas.ModelPlatforms,
-                 metadata: typing.Dict[str, typing.Any],
-                 confidence_threshold: float = 0.5,
-                 iou_threshold: float = 0.4,
-                 debug: bool = False
-                 ) -> None:
-        super().__init__()
-        assert isinstance(model_path, pathlib.Path), "`model_path` must be a Path"
-        assert model_path.exists(), "Supplied `model_path` does not exist"
-        assert model_path.suffix == ".onnx", "Model must be onnx format"
-        self.model_path = model_path
-        assert isinstance(request_queue, queue.Queue), "`request_queue` must be a Queue"
-        self.request_queue = request_queue
-        assert isinstance(result_queue, queue.Queue), "`result_queue` must be a Queue"
-        self.result_queue = result_queue
-        self.name = "python-cvops-inference"
-        self.is_listening = True
-        self.debug = debug
-        assert isinstance(
-            model_platform, cvops.schemas.ModelPlatforms), "`model_platform` must be a ModelPlatforms enum"
-        self.model_platform = model_platform
-        assert isinstance(confidence_threshold, float), "`confidence_threshold` must be a float"
-        self.confidence_threshold = confidence_threshold
-        assert isinstance(iou_threshold, float), "`iou_threshold` must be a float"
-        self.iou_threshold = iou_threshold
-        assert isinstance(metadata, dict), "`metadata` must be a dict"
-        self.metadata = metadata
-
-    def run(self) -> None:
-        """ Starts the inference process """
-        try:
-            if self.debug:
-                logger.debug("Starting Inference thread %s on pid %s", self.name, os.getpid())
-            session_request = cvops.inference.factories.create_inference_session_request(
-                self.model_platform,
-                self.model_path,
-                metadata=self.metadata,
-                confidence_threshold=self.confidence_threshold,
-                iou_threshold=self.iou_threshold
-            )
-            with cvops.inference.manager.InferenceSessionManager(session_request) as mgr:
-                if self.debug:
-                    self.result_queue.put(True)
-                while self.is_listening:
-                    try:
-                        image = self.request_queue.get()
-                        logger.debug("Received image from queue")
-                        assert isinstance(image, numpy.ndarray), "`image` must be a numpy.ndarray"
-                        c_inference_result = mgr.run_inference(
-                            image,
-                            "",
-                            draw_detections=False
-                        )
-                        logger.debug("Ran inference")
-                        if not c_inference_result:
-                            raise RuntimeError("Inference returned NULL Pointer")
-                        # Note: c-inference result is a pointer to a struct (that itself contains pointers), not the struct itself
-                        # it cannot be serialized an sent over the wire, the pointer will be orphaned
-                        serializable_result = cvops.inference.factories.inference_result_from_c_type(c_inference_result)
-                        while not self.result_queue.empty():
-                            self.result_queue.get_nowait()
-                        self.result_queue.put(serializable_result)
-                        mgr.dispose_inference_result(c_inference_result)
-                    except Exception as ex:  # pylint: disable=broad-exception-caught
-                        logger.exception(ex, "Error in Inference Process.  Failed Inference attempt.")
-        except Exception as ex:  # pylint: disable=broad-exception-caught
-            logger.exception(ex, "Error in Inference Process. Unable to start session.")
-        finally:
-            logger.debug("Exiting Inference Thread %s on pid %s", self.name, os.getpid())
 
 
 class InferenceProcess(multiprocessing.Process):
@@ -209,12 +124,13 @@ class InferenceProcess(multiprocessing.Process):
 
     def __init__(self,
                  model_path: pathlib.Path,
-                 request_queue: "multiprocessing.queues.Queue[numpy.ndarray]",
+                 request_queue: "multiprocessing.queues.Queue[bytes]",
                  result_queue: "multiprocessing.queues.Queue[cvops.schemas.InferenceResult]",
                  model_platform: cvops.schemas.ModelPlatforms,
                  metadata: typing.Dict[str, typing.Any],
                  confidence_threshold: float = 0.5,
                  iou_threshold: float = 0.4,
+                 process_name: typing.Optional[str] = None,
                  debug: bool = False
                  ) -> None:
         super().__init__()
@@ -229,7 +145,9 @@ class InferenceProcess(multiprocessing.Process):
         self.request_queue = request_queue
         assert isinstance(result_queue, multiprocessing.queues.Queue), "`result_queue` must be a multiprocessing.Queue"
         self.result_queue = result_queue
-        self.name = "python-cvops-inference"
+        if process_name is not None:
+            assert isinstance(process_name, str), "`process_name` must be a str"
+        self.name = process_name or "python-cvops-inference"
         self.is_listening = True
         self.debug = debug
         assert isinstance(
@@ -256,18 +174,16 @@ class InferenceProcess(multiprocessing.Process):
             )
             with cvops.inference.manager.InferenceSessionManager(session_request) as mgr:
                 if self.debug:
-                    self.result_queue.put(True)
+                    self.result_queue.put(self.name)
                 while self.is_listening:
                     try:
-                        image = self.request_queue.get()
-                        logger.debug("Received image from queue")
+                        image_bytes = self.request_queue.get()
+                        # logger.debug("Received image from queue")
+                        image = cvops.image_processor.extract_image(image_bytes)
                         assert isinstance(image, numpy.ndarray), "`image` must be a numpy.ndarray"
-                        c_inference_result = mgr.run_inference(
-                            image,
-                            "",
-                            draw_detections=False
-                        )
-                        logger.debug("Ran inference")
+                        # logger.debug("Running inference on image.  Image size: %s", len(image_bytes))
+                        c_inference_result = mgr.run_inference(image)
+                        # logger.debug("Inference complete")
                         if not c_inference_result:
                             raise RuntimeError("Inference returned NULL Pointer")
                         # Note: c-inference result is a pointer to a struct (that itself contains pointers), not the struct itself
@@ -290,12 +206,14 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
         This class is
     """
     model_path: pathlib.Path
-    inference_request_queue: "queue.Queue[numpy.ndarray]"
-    inference_result_queue: "queue.Queue[cvops.schemas.InferenceResult]"
-    inference_process: InferenceProcess
+    inference_request_queue: "multiprocessing.queues.Queue[bytes]"
+    inference_result_queue: "multiprocessing.queues.Queue[cvops.schemas.InferenceResult]"
+    inference_processes: typing.List[InferenceProcess]
     last_result: typing.Optional[cvops.inference.c_interfaces.InferenceResult]
     _queue_initialized: bool
     debug: bool
+    last_request_time: int
+    num_inference_processes: int
 
     def __init__(self,
                  model_path: typing.Union[str, pathlib.Path],
@@ -303,6 +221,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
                  metadata: typing.Dict[str, typing.Any],
                  confidence_threshold: float = 0.5,
                  iou_threshold: float = 0.4,
+                 num_inference_processes: int = 1,
                  debug: bool = False,
                  **kwargs
                  ) -> None:
@@ -313,42 +232,60 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
             model_path = pathlib.Path(model_path)
         assert model_path.exists(), "Supplied model path does not exist"
         self.model_path = model_path
-        self.inference_request_queue = queue.Queue()
-        self.inference_result_queue = queue.Queue()
-        self.inference_process = InferenceThread(
-            model_path=self.model_path,
-            model_platform=model_platform,
-            request_queue=self.inference_request_queue,
-            result_queue=self.inference_result_queue,
-            metadata=metadata,
-            confidence_threshold=confidence_threshold,
-            iou_threshold=iou_threshold,
-            debug=debug or cvops.config.SETTINGS.debug
-        )
+        self.inference_request_queue = multiprocessing.Queue()
+        self.inference_result_queue = multiprocessing.Queue()
+        assert isinstance(num_inference_processes, int), "`num_inference_processes` must be an int"
+        self.num_inference_processes = num_inference_processes
+        self.inference_processes = []
+        for i in range(self.num_inference_processes):
+            self.inference_processes.append(
+                InferenceProcess(
+                    model_path=self.model_path,
+                    model_platform=model_platform,
+                    request_queue=self.inference_request_queue,
+                    result_queue=self.inference_result_queue,
+                    metadata=metadata,
+                    process_name=f"python-cvops-inference-{i}",
+                    confidence_threshold=confidence_threshold,
+                    iou_threshold=iou_threshold,
+                    debug=debug or cvops.config.SETTINGS.debug
+                )
+            )
         self.last_result = None
         self._queue_initialized = False
         self.debug = debug
+        self.last_request_time = int(time.time() * 1000)
 
     def __enter__(self) -> "LocalModelVideoPlayer":
         try:
             super().__enter__()
-            self.inference_process.start()
+            started = [False for _ in range(self.num_inference_processes)]
+            _ = [p.start() for p in self.inference_processes]  # type: ignore
             if self.debug:
-                is_started = self.inference_result_queue.get()
-                if not is_started:
-                    raise RuntimeError("Unable to start inference process")
+                logger.debug("Waiting for inference processes to start")
+                # TODO: This code to wait for inferences processes doesn't work
+                while not all(started):
+                    process_name = self.inference_result_queue.get()
+                    for i, process in enumerate(self.inference_processes):
+                        if process.name == process_name:
+                            started[i] = True
+                            logger.debug("Inference Process %s started", process.name)
+                            break
             return self
         except Exception as ex:
             raise RuntimeError("Unable to start inference process") from ex
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         try:
-            self.inference_process.is_listening = False
-            self.inference_process.join()
-            # self.inference_process.terminate()
-            # while self.inference_process.is_alive():
-            #     time.sleep(0.1)
-            # self.inference_process.close()
+            # # For threading
+            # self.inference_process.is_listening = False
+            # self.inference_process.join()
+
+            # Same, but for multiprocessing
+            _ = [p.terminate() for p in self.inference_processes]  # type: ignore[func-returns-value]
+            # _ = [p.join() for p in self.inference_processes]
+            # _ = [p.close() for p in self.inference_processes]
+            logger.debug("Inference processes terminated")
         except Exception as ex:  # pylint: disable=broad-exception-caught
             logger.exception(ex, "Unable to end inference process")
         finally:
@@ -359,8 +296,10 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
         try:
             # Send the first frame to the inference process
             if self.last_result is None and not self._queue_initialized:
-                self.inference_request_queue.put_nowait(frame)
-                self._queue_initialized = True
+                image_bytes = cvops.image_processor.image_to_bytes(frame)
+                for _ in range(self.num_inference_processes):
+                    self.inference_request_queue.put_nowait(image_bytes)
+                    self._queue_initialized = True
 
             # Check for new results
             inference_result = None
@@ -370,13 +309,29 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
                 inference_result = self.inference_result_queue.get_nowait()
             if inference_result is not None:
                 # Convert to a ctype for the render method
-                logger.debug("Received inference result")
+                # logger.debug("Received inference result")
                 self.last_result = cvops.inference.factories.inference_result_to_c_type_ptr(inference_result)
                 # Result queue is cleared, send the current frame to the inference process
-                self.inference_request_queue.put_nowait(frame)
+                # self.inference_request_queue.put_nowait(frame)
             # Render results to frame if available
             if self.last_result:
                 self.render(self.last_result, frame)
+
+                # Send the current frame to the inference process "Just in Time"
+                # Use the last inference time to estimate when to send the next frame
+                milliseconds_since_last_request = int(time.time() * 1000) - self.last_request_time
+                if milliseconds_since_last_request > (
+                        self.last_result.contents.milliseconds /
+                        self.num_inference_processes):
+                    # Clear the queue prior to inserting the new frame
+                    while not self.inference_request_queue.empty():
+                        # logger.debug("Removed request queue item")  # This should only happen is
+                        # something funny happens on the inference thread.
+                        self.inference_request_queue.get_nowait()
+                    if frame is not None:
+                        image_bytes = cvops.image_processor.image_to_bytes(frame)
+                        self.inference_request_queue.put_nowait(image_bytes)
+                        self.last_request_time = int(time.time() * 1000)
         except queue.Full:
             pass
         except queue.Empty:

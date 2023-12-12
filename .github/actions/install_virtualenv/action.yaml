@@ -1,0 +1,32 @@
+# Create Python virtual environment
+name: "Install virtualenv"
+description: "Create Python virtual environment from repository"
+inputs:
+  python-version:
+    description: "Python version"
+    required: true
+    default: "3.10"
+runs:
+  using: "composite"
+  steps:
+    - id: "install-python"
+      uses: "actions/setup-python@v2"
+      with:
+        python-version: "${{ inputs.python-version }}"
+    - id: "cache-dependencies"
+      uses: "actions/cache@v3"
+      with:
+        path: "venv"
+        key: "venv-${{ hashFiles('**/pyproject.toml') }}"
+    - id: "create-virutal-enviroment"
+      shell: "bash"
+      run: |
+        python -m venv venv
+        echo "::set-output name=virtualenv-path::venv"
+    - id: "install-dependencies"
+      shell: "bash"
+      run: |
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install -e .[dev]
+

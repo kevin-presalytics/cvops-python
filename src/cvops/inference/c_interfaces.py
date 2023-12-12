@@ -65,7 +65,7 @@ class InferenceResult(ctypes.Structure):
 c_inference_result_p = ctypes.POINTER(InferenceResult)
 
 
-def dispose_inference_result(result: c_inference_result_p) -> None:
+def dispose_inference_result(result: c_inference_result_p) -> None:  # type: ignore[valid-type]
     """ Disposes the inference result
     Notes:
         * This is called by the python garbage collector when the object is no longer referenced
@@ -73,10 +73,8 @@ def dispose_inference_result(result: c_inference_result_p) -> None:
     """
     import cvops.inference.loader  # pylint: disable=import-outside-toplevel, redefined-outer-name
     dll = cvops.inference.loader.get_dll_instance()
+    assert dll is not None
     dll.dispose_inference_result(result)
-
-
-# c_inference_result_p.__del__ = dispose_inference_result
 
 
 class IInferenceManager(ctypes.Structure):
@@ -90,3 +88,32 @@ MODEL_PLATFORM_C_MAP = {
     cvops.schemas.ModelPlatforms.YOLO: 1,
     cvops.schemas.ModelPlatforms.DETECTRON: 2,
 }
+
+
+class Tracker(ctypes.Structure):
+    """ Interface for the tracker """
+
+
+c_tracker_p = ctypes.POINTER(Tracker)
+
+TRACKING_ALGORITHMS_C_MAP = {
+    cvops.schemas.TrackingAlgorithmTypes.BOOSTING: 1,
+    cvops.schemas.TrackingAlgorithmTypes.MIL: 2,
+    cvops.schemas.TrackingAlgorithmTypes.KCF: 3,
+    cvops.schemas.TrackingAlgorithmTypes.TLD: 4,
+    cvops.schemas.TrackingAlgorithmTypes.MEDIANFLOW: 5,
+    cvops.schemas.TrackingAlgorithmTypes.GOTURN: 6,
+    cvops.schemas.TrackingAlgorithmTypes.MOSSE: 7,
+    cvops.schemas.TrackingAlgorithmTypes.CSRT: 8
+}
+
+
+class TrackerState(ctypes.Structure):
+    """ Interface for the tracker state """
+    _fields_ = [
+        ("boxes", c_box_p),
+        ("boxes_count", ctypes.c_int),
+    ]
+
+
+c_tracker_state_p = ctypes.POINTER(TrackerState)
