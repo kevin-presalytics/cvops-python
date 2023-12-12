@@ -68,7 +68,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ${{ steps.get-short-sha.outputs.short-sha }},latest
+          tags: ghcr.io/kevin-presalytics/cvops-python:${{ steps.get-short-sha.outputs.short-sha }}
 
         
 
