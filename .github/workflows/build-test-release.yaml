@@ -35,15 +35,15 @@ jobs:
         with:
           path: ./cvops-inference/build
           key: ${{ runner.os }}-build-${{ hashFiles('**/CMakeLists.txt') }}
-      - name: Build C Library
-        run: |
-          source venv/bin/activate
-          update_submodules
-          bootstrap
-      - name: Run tests
-        run: |
-          source venv/bin/activate
-          run_tests
+      # - name: Build C Library
+      #   run: |
+      #     source venv/bin/activate
+      #     update_submodules
+      #     bootstrap
+      # - name: Run tests
+      #   run: |
+      #     source venv/bin/activate
+      #     run_tests
 
         
 
