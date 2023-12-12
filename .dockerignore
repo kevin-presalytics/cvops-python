@@ -1,0 +1,9 @@
+.github/
+.mypy_cache/
+.vscode/
+build/
+venv/
+.env
+.gitignore
+.gitmodules
+

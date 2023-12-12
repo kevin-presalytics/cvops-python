@@ -1,0 +1,10 @@
+# Create and output variable with the short SHA of the current commit
+name: "Short SHA"
+description: "Create and output variable with the short SHA of the current commit"
+runs:
+  using: "composite"
+  steps:
+    - id: "get-short-sha"
+      shell: "bash"
+      run: |
+        echo "::set-output name=short-sha::$(git rev-parse --short HEAD)"
