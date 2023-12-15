@@ -201,7 +201,7 @@ class InferenceProcess(multiprocessing.Process):
             logger.debug("Exiting Inference Process %s on pid %s", self.name, os.getpid())
 
 
-class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, VideoPlayerBase):
+class LocalModelVideoPlayer(cvops.tracking.VideoObjectTrackerMixin, VideoPlayerBase):
     """ Video Player that uses a local model for inference
         This class is
     """
@@ -294,6 +294,7 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
     def process_frame(self, frame: numpy.ndarray) -> numpy.ndarray:
         """ Processes a frame of video and returns the processed frame """
         try:
+            new_result = False
             # Send the first frame to the inference process
             if self.last_result is None and not self._queue_initialized:
                 image_bytes = cvops.image_processor.image_to_bytes(frame)
@@ -311,12 +312,8 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
                 # Convert to a ctype for the render method
                 # logger.debug("Received inference result")
                 self.last_result = cvops.inference.factories.inference_result_to_c_type_ptr(inference_result)
-                # Result queue is cleared, send the current frame to the inference process
-                # self.inference_request_queue.put_nowait(frame)
-            # Render results to frame if available
-            if self.last_result:
-                self.render(self.last_result, frame)
-
+                new_result = True
+            if new_result:
                 # Send the current frame to the inference process "Just in Time"
                 # Use the last inference time to estimate when to send the next frame
                 milliseconds_since_last_request = int(time.time() * 1000) - self.last_request_time
@@ -332,6 +329,14 @@ class LocalModelVideoPlayer(cvops.inference.manager.InferenceResultRenderer, Vid
                         image_bytes = cvops.image_processor.image_to_bytes(frame)
                         self.inference_request_queue.put_nowait(image_bytes)
                         self.last_request_time = int(time.time() * 1000)
+                
+                # update image and tracker with new results
+                self.update_tracker(image, self.last_result)
+            else:
+                # Advance the tracker one frame and render
+                self.track_image(image)
+            self.new_result = False
+                
         except queue.Full:
             pass
         except queue.Empty:

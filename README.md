@@ -37,6 +37,14 @@ pip install -U pip
 
 # Install the package with development utilities in editable mode
 pip install -e .[dev]
+
+# Install build tools for subrepository C Lib
+
+#Install the Ninja Build System
+sudo apt install ninja-build
+
+#Install llvm
+sudo apt install llvm clang
 ```
 
 ### Pre-commit hooks
